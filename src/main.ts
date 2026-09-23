@@ -11,6 +11,7 @@ import { WorkerClient } from './ai/worker-client';
 import { chunkMarkdown } from './core/chunker';
 import { findCandidateClusters, findClustersForNote } from './ai/vector-search';
 import { getMarkdownFiles, ensureFolderExists, sanitizeNoteTitle } from './utils/vault-mutator';
+import { LoggerService } from './core/logger';
 
 export default class SemanticGardenerPlugin extends Plugin {
   settings: PluginSettings = DEFAULT_SETTINGS;
@@ -18,6 +19,7 @@ export default class SemanticGardenerPlugin extends Plugin {
   transactionManager!: TransactionManager;
   geminiClient!: GeminiClient;
   workerClient!: WorkerClient;
+  logger: LoggerService = new LoggerService();
 
   candidateClusters: CandidateCluster[] = [];
   refactorPlans: Record<string, RefactorPlan> = {};
@@ -33,7 +35,17 @@ export default class SemanticGardenerPlugin extends Plugin {
     await this.transactionManager.init();
 
     this.geminiClient = new GeminiClient(this.settings.geminiApiKey, this.settings.geminiModel);
-    this.workerClient = new WorkerClient(this.app, this.manifest.id);
+    this.workerClient = new WorkerClient(this.app, this.manifest.id, this.logger);
+    await this.logger.initFileLogger(this.app, this.manifest.id);
+
+    this.workerClient.setModelProgressListener((file, percent) => {
+      const overall = 15 + Math.round((percent / 100) * 35);
+      if (percent >= 100) {
+        this.logger.updateProgress('Загрузка модели', overall, `Файл ${file} загружен (100%). Компиляция ONNX WebAssembly...`);
+      } else {
+        this.logger.updateProgress('Загрузка модели', overall, `Скачивание ${file}: ${percent}%`);
+      }
+    });
 
     // 2. Register Review View
     this.registerView(
@@ -60,6 +72,12 @@ export default class SemanticGardenerPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: 'cancel-scan',
+      name: 'Cancel ongoing semantic scan',
+      callback: () => this.cancelScan()
+    });
+
+    this.addCommand({
       id: 'open-review',
       name: 'Open review view',
       callback: () => this.activateView()
@@ -69,6 +87,12 @@ export default class SemanticGardenerPlugin extends Plugin {
       id: 'undo-last',
       name: 'Undo last refactor',
       callback: () => this.transactionManager.undoLast()
+    });
+
+    this.addCommand({
+      id: 'open-debug-log',
+      name: 'Open debug log (debug.log)',
+      callback: () => this.logger.openLogFile()
     });
 
     // 5. Register Settings Tab
@@ -93,8 +117,9 @@ export default class SemanticGardenerPlugin extends Plugin {
   }
 
   onunload() {
-    this.workerClient.terminate();
-    this.vectorStorage.close();
+    this.workerClient?.terminate();
+    this.vectorStorage?.close();
+    this.logger.info('Semantic Gardener выгружен.');
   }
 
   async loadSettings() {
@@ -142,6 +167,7 @@ export default class SemanticGardenerPlugin extends Plugin {
     }
 
     this.isScanning = true;
+    const signal = this.logger.startSession('Поиск заметок в хранилище...');
     this.scanProgress = 'Поиск заметок в vault...';
     this.notifyViews();
     await this.activateView();
@@ -151,21 +177,29 @@ export default class SemanticGardenerPlugin extends Plugin {
       const files = getMarkdownFiles(this.app, excluded);
 
       if (files.length === 0) {
+        this.logger.warn('В хранилище не найдено заметок для анализа.');
         new Notice('В хранилище не найдено заметок для анализа.');
-        this.isScanning = false;
-        this.notifyViews();
+        this.logger.finishSession('Заметок для анализа не найдено');
         return;
       }
 
+      this.logger.info(`Найдено ${files.length} заметок. Нарезка структурных блоков...`);
       new Notice(`Semantic Gardener: Начало сканирования ${files.length} заметок...`);
 
-      // 1. Chunk and extract text
+      // 1. Chunk and extract text (0% - 15%)
       const allChunks: SemanticChunk[] = [];
       const chunksNeedingEmbedding: Array<{ id: string; text: string }> = [];
 
       for (let i = 0; i < files.length; i++) {
+        if (signal.aborted) {
+          this.logger.cancelSession();
+          return;
+        }
+
         const file = files[i];
+        const phasePct = Math.round(((i + 1) / files.length) * 15);
         this.scanProgress = `Нарезка AST (${i + 1}/${files.length}): ${file.basename}`;
+        this.logger.updateProgress('Нарезка AST', phasePct, this.scanProgress);
         this.notifyViews();
 
         const content = await this.app.vault.read(file);
@@ -185,19 +219,35 @@ export default class SemanticGardenerPlugin extends Plugin {
         }
       }
 
-      // 2. Generate missing embeddings in Web Worker
+      this.logger.info(`Нарезка завершена: ${allChunks.length} блоков. Из кэша: ${allChunks.length - chunksNeedingEmbedding.length}, новых: ${chunksNeedingEmbedding.length}.`);
+
+      if (signal.aborted) {
+        this.logger.cancelSession();
+        return;
+      }
+
+      // 2. Generate missing embeddings in Web Worker (15% - 70%)
       if (chunksNeedingEmbedding.length > 0) {
         this.scanProgress = `Векторизация ${chunksNeedingEmbedding.length} фрагментов...`;
+        this.logger.updateProgress('Векторизация', 15, this.scanProgress);
         this.notifyViews();
 
         const embeddingMap = await this.workerClient.embedBatch(
           chunksNeedingEmbedding,
           8,
           (done, total) => {
+            const batchPct = 15 + Math.round((done / total) * 55);
             this.scanProgress = `Векторизация: ${done}/${total} блоков (${Math.round((done / total) * 100)}%)`;
+            this.logger.updateProgress('Векторизация', batchPct, this.scanProgress);
             this.notifyViews();
-          }
+          },
+          signal
         );
+
+        if (signal.aborted) {
+          this.logger.cancelSession();
+          return;
+        }
 
         // Update chunks with generated embeddings and persist
         const toSave: SemanticChunk[] = [];
@@ -210,50 +260,82 @@ export default class SemanticGardenerPlugin extends Plugin {
 
         if (toSave.length > 0) {
           await this.vectorStorage.saveChunks(toSave);
+          this.logger.info(`Сохранено ${toSave.length} новых эмбеддингов в IndexedDB.`);
         }
+      } else {
+        this.logger.updateProgress('Векторизация', 70, 'Все фрагменты уже содержатся в кэше.');
       }
 
-      // 3. Cluster Candidates by Cosine Similarity
+      if (signal.aborted) {
+        this.logger.cancelSession();
+        return;
+      }
+
+      // 3. Cluster Candidates by Cosine Similarity (70% - 80%)
       this.scanProgress = 'Поиск семантических дубликатов и кластеризация...';
+      this.logger.updateProgress('Кластеризация', 75, this.scanProgress);
       this.notifyViews();
 
       this.candidateClusters = findCandidateClusters(allChunks, this.settings.similarityThreshold);
 
       if (this.candidateClusters.length === 0) {
+        this.logger.finishSession('Семантических дубликатов с заданным порогом сходства не обнаружено.');
         new Notice('Семантических дубликатов с заданным порогом сходства не обнаружено.');
-        this.isScanning = false;
         this.scanProgress = '';
-        this.notifyViews();
         return;
       }
 
+      this.logger.success(`Найдено ${this.candidateClusters.length} кандидатов на рефакторинг.`);
       new Notice(`Найдено ${this.candidateClusters.length} кандидатов на рефакторинг. Запуск LLM Gatekeeper...`);
 
-      // 4. Validate with Gemini Gatekeeper if API key is provided
+      // 4. Validate with Gemini Gatekeeper if API key is provided (80% - 100%)
       if (this.settings.geminiApiKey) {
+        this.logger.info('Запуск анализа LLM Gatekeeper...');
         for (let i = 0; i < this.candidateClusters.length; i++) {
+          if (signal.aborted) {
+            this.logger.cancelSession();
+            return;
+          }
+
           const cluster = this.candidateClusters[i];
+          const gatekeeperPct = 80 + Math.round(((i + 1) / this.candidateClusters.length) * 20);
           this.scanProgress = `LLM Gatekeeper (${i + 1}/${this.candidateClusters.length}): Анализ кластера...`;
+          this.logger.updateProgress('LLM Gatekeeper', gatekeeperPct, this.scanProgress);
           this.notifyViews();
 
           try {
             const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
             this.refactorPlans[cluster.id] = plan;
+            if (plan.isDuplicate) {
+              this.logger.success(`Кластер ${cluster.id.slice(0, 8)} одобрен: концепт "${plan.conceptTitle}".`);
+            } else {
+              this.logger.warn(`Кластер ${cluster.id.slice(0, 8)} отклонен: ${plan.rejectionReason || 'Нет дублирования'}.`);
+            }
           } catch (aiErr: any) {
             console.error(`AI Analysis error for cluster ${cluster.id}:`, aiErr);
+            this.logger.error(`Ошибка AI для кластера ${cluster.id.slice(0, 8)}: ${aiErr.message}`);
           }
         }
       } else {
+        this.logger.warn('API-ключ Gemini не задан. Автоматическая генерация замен пропущена.');
         new Notice('Укажите Gemini API-ключ в настройках для автоматической генерации микрохирургических замен.');
       }
 
       this.scanProgress = '';
+      this.logger.finishSession(`Сканирование завершено! Доступно ${this.candidateClusters.length} концептов.`);
       new Notice(`Сканирование завершено! Доступно ${this.candidateClusters.length} концептов для ревизии.`);
     } catch (err: any) {
-      console.error('Semantic Gardener scan error:', err);
-      new Notice(`Ошибка при сканировании: ${err.message}`);
+      if (signal.aborted) {
+        this.logger.cancelSession();
+      } else {
+        console.error('Semantic Gardener scan error:', err);
+        const stack = err?.stack || String(err);
+        this.logger.error(`Ошибка при сканировании: ${err?.message || err}`, stack);
+        new Notice(`Ошибка при сканировании: ${err?.message || err}`);
+      }
     } finally {
       this.isScanning = false;
+      this.scanProgress = '';
       this.notifyViews();
     }
   }
@@ -268,25 +350,37 @@ export default class SemanticGardenerPlugin extends Plugin {
       return;
     }
 
+    if (this.isScanning) {
+      new Notice('Сканирование уже выполняется...');
+      return;
+    }
+
     this.isScanning = true;
+    const signal = this.logger.startSession(`Анализ заметки: ${activeFile.basename}...`);
     this.scanProgress = `Анализ активной заметки: ${activeFile.basename}...`;
     this.notifyViews();
     await this.activateView();
 
     try {
+      this.logger.updateProgress('Анализ заметки', 15, `Чтение ${activeFile.basename}...`);
       const activeContent = await this.app.vault.read(activeFile);
       const activeChunks = await chunkMarkdown(activeFile.path, activeContent, {
         minChunkLength: this.settings.minChunkLength
       });
 
       if (activeChunks.length === 0) {
+        this.logger.warn('В активной заметке нет подходящих текстовых фрагментов.');
         new Notice('В активной заметке нет подходящих текстовых фрагментов.');
-        this.isScanning = false;
-        this.notifyViews();
+        this.logger.finishSession('Нет подходящих фрагментов');
         return;
       }
 
-      // Check/generate embeddings for active note
+      if (signal.aborted) {
+        this.logger.cancelSession();
+        return;
+      }
+
+      // Check/generate embeddings for active note (15% - 60%)
       const needingEmbedding: Array<{ id: string; text: string }> = [];
       for (const chunk of activeChunks) {
         const cached = await this.vectorStorage.getChunk(chunk.id);
@@ -298,7 +392,8 @@ export default class SemanticGardenerPlugin extends Plugin {
       }
 
       if (needingEmbedding.length > 0) {
-        const map = await this.workerClient.embedBatch(needingEmbedding);
+        this.logger.updateProgress('Векторизация', 30, `Векторизация ${needingEmbedding.length} фрагментов...`);
+        const map = await this.workerClient.embedBatch(needingEmbedding, 8, undefined, signal);
         const toSave: SemanticChunk[] = [];
         for (const chunk of activeChunks) {
           if (!chunk.embedding && map.has(chunk.id)) {
@@ -309,7 +404,13 @@ export default class SemanticGardenerPlugin extends Plugin {
         await this.vectorStorage.saveChunks(toSave);
       }
 
-      // Load all other vault chunks from database
+      if (signal.aborted) {
+        this.logger.cancelSession();
+        return;
+      }
+
+      // Load all other vault chunks from database (60% - 75%)
+      this.logger.updateProgress('Поиск связей', 65, 'Сравнение с базой знаний...');
       const allIndexed = await this.vectorStorage.getAllChunksWithEmbeddings();
       const combined = [...allIndexed];
       for (const ac of activeChunks) {
@@ -321,28 +422,60 @@ export default class SemanticGardenerPlugin extends Plugin {
       this.candidateClusters = findClustersForNote(activeFile.path, combined, this.settings.similarityThreshold);
 
       if (this.candidateClusters.length === 0) {
+        this.logger.finishSession(`Дубликатов для заметки "${activeFile.basename}" не найдено.`);
         new Notice(`Дубликатов для заметки "${activeFile.basename}" не найдено.`);
       } else {
+        this.logger.success(`Найдено ${this.candidateClusters.length} совпадений.`);
         new Notice(`Найдено ${this.candidateClusters.length} совпадений для "${activeFile.basename}".`);
 
         if (this.settings.geminiApiKey) {
-          for (const cluster of this.candidateClusters) {
+          this.logger.info('Анализ совпадений через Gemini Gatekeeper...');
+          for (let i = 0; i < this.candidateClusters.length; i++) {
+            if (signal.aborted) {
+              this.logger.cancelSession();
+              return;
+            }
+            const cluster = this.candidateClusters[i];
+            const pct = 75 + Math.round(((i + 1) / this.candidateClusters.length) * 25);
+            this.logger.updateProgress('LLM Gatekeeper', pct, `Анализ кластера ${i + 1}/${this.candidateClusters.length}...`);
+
             try {
               const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
               this.refactorPlans[cluster.id] = plan;
+              if (plan.isDuplicate) {
+                this.logger.success(`Кластер одобрен: концепт "${plan.conceptTitle}".`);
+              }
             } catch (aiErr: any) {
               console.error('Active note AI error:', aiErr);
+              this.logger.error(`Ошибка AI: ${aiErr.message}`);
             }
           }
         }
+        this.logger.finishSession(`Анализ завершен. Доступно ${this.candidateClusters.length} кандидатов.`);
       }
     } catch (err: any) {
-      console.error('Active note scan error:', err);
-      new Notice(`Ошибка: ${err.message}`);
+      if (signal.aborted) {
+        this.logger.cancelSession();
+      } else {
+        console.error('Active note scan error:', err);
+        const stack = err?.stack || String(err);
+        this.logger.error(`Ошибка при анализе активной заметки: ${err?.message || err}`, stack);
+        new Notice(`Ошибка: ${err?.message || err}`);
+      }
     } finally {
       this.isScanning = false;
       this.scanProgress = '';
       this.notifyViews();
+    }
+  }
+
+  cancelScan(): void {
+    if (this.isScanning) {
+      this.logger.cancelSession();
+      this.isScanning = false;
+      this.scanProgress = '';
+      this.notifyViews();
+      new Notice('Сканирование остановлено пользователем.');
     }
   }
 
