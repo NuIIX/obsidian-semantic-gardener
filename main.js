@@ -34,10 +34,9 @@ __export(main_exports, {
   default: () => SemanticGardenerPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian7 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/types/index.ts
-var import_obsidian = require("obsidian");
 var DEFAULT_SETTINGS = {
   geminiApiKey: "",
   geminiModel: "gemini-3.5-flash",
@@ -49,8 +48,8 @@ var DEFAULT_SETTINGS = {
 };
 
 // src/settings.ts
-var import_obsidian2 = require("obsidian");
-var SemanticGardenerSettingTab = class extends import_obsidian2.PluginSettingTab {
+var import_obsidian = require("obsidian");
+var SemanticGardenerSettingTab = class extends import_obsidian.PluginSettingTab {
   plugin;
   constructor(app, plugin) {
     super(app, plugin);
@@ -60,7 +59,7 @@ var SemanticGardenerSettingTab = class extends import_obsidian2.PluginSettingTab
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Semantic Gardener \u2014 \u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438" });
-    new import_obsidian2.Setting(containerEl).setName("Google AI Studio API Key (BYOK)").setDesc("\u0412\u0430\u0448 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0439 API-\u043A\u043B\u044E\u0447 Gemini \u0434\u043B\u044F \u0440\u0430\u0431\u043E\u0442\u044B Gatekeeper \u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433\u0430.").addText((text2) => {
+    new import_obsidian.Setting(containerEl).setName("Google AI Studio API Key (BYOK)").setDesc("\u0412\u0430\u0448 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0439 API-\u043A\u043B\u044E\u0447 Gemini \u0434\u043B\u044F \u0440\u0430\u0431\u043E\u0442\u044B Gatekeeper \u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433\u0430.").addText((text2) => {
       text2.setPlaceholder("AIzaSy...").setValue(this.plugin.settings.geminiApiKey).onChange(async (value) => {
         this.plugin.settings.geminiApiKey = value.trim();
         this.plugin.geminiClient.setApiKey(value.trim());
@@ -68,26 +67,26 @@ var SemanticGardenerSettingTab = class extends import_obsidian2.PluginSettingTab
       });
       text2.inputEl.type = "password";
     });
-    new import_obsidian2.Setting(containerEl).setName("\u041C\u043E\u0434\u0435\u043B\u044C Gemini").setDesc("\u041C\u043E\u0434\u0435\u043B\u044C \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u043E\u0432 \u0438 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0437\u0430\u043C\u0435\u043D.").addDropdown((dropdown) => {
+    new import_obsidian.Setting(containerEl).setName("\u041C\u043E\u0434\u0435\u043B\u044C Gemini").setDesc("\u041C\u043E\u0434\u0435\u043B\u044C \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u043E\u0432 \u0438 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0437\u0430\u043C\u0435\u043D.").addDropdown((dropdown) => {
       dropdown.addOption("gemini-3.5-flash", "Gemini 3.5 Flash (\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F)").addOption("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite").addOption("gemini-2.5-flash", "Gemini 2.5 Flash").addOption("gemini-1.5-pro", "Gemini 1.5 Pro").setValue(this.plugin.settings.geminiModel).onChange(async (value) => {
         this.plugin.settings.geminiModel = value;
         this.plugin.geminiClient.setModel(value);
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian2.Setting(containerEl).setName("\u041F\u043E\u0440\u043E\u0433 \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u0430").setDesc(`\u041C\u0438\u043D\u0438\u043C\u0430\u043B\u044C\u043D\u043E\u0435 \u043A\u043E\u0441\u0438\u043D\u0443\u0441\u043D\u043E\u0435 \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u043E \u0432\u0435\u043A\u0442\u043E\u0440\u043E\u0432 \u0434\u043B\u044F \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u0432 \u043A\u043B\u0430\u0441\u0442\u0435\u0440 (\u0422\u0435\u043A\u0443\u0449\u0435\u0435: ${this.plugin.settings.similarityThreshold}). \u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F: 0.80 - 0.85.`).addSlider((slider) => {
+    new import_obsidian.Setting(containerEl).setName("\u041F\u043E\u0440\u043E\u0433 \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u0430").setDesc(`\u041C\u0438\u043D\u0438\u043C\u0430\u043B\u044C\u043D\u043E\u0435 \u043A\u043E\u0441\u0438\u043D\u0443\u0441\u043D\u043E\u0435 \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u043E \u0432\u0435\u043A\u0442\u043E\u0440\u043E\u0432 \u0434\u043B\u044F \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u0432 \u043A\u043B\u0430\u0441\u0442\u0435\u0440 (\u0422\u0435\u043A\u0443\u0449\u0435\u0435: ${this.plugin.settings.similarityThreshold}). \u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F: 0.80 - 0.85.`).addSlider((slider) => {
       slider.setLimits(0.7, 0.95, 0.01).setValue(this.plugin.settings.similarityThreshold).setDynamicTooltip().onChange(async (value) => {
         this.plugin.settings.similarityThreshold = value;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian2.Setting(containerEl).setName("\u041F\u0430\u043F\u043A\u0430 \u0434\u043B\u044F \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u044B\u0445 \u0437\u0430\u043C\u0435\u0442\u043E\u043A").setDesc("\u0414\u0438\u0440\u0435\u043A\u0442\u043E\u0440\u0438\u044F \u0432 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435, \u0432 \u043A\u043E\u0442\u043E\u0440\u0443\u044E \u0431\u0443\u0434\u0443\u0442 \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0442\u044C\u0441\u044F \u0441\u043E\u0437\u0434\u0430\u0432\u0430\u0435\u043C\u044B\u0435 \u043A\u0430\u043D\u043E\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0437\u0430\u043C\u0435\u0442\u043A\u0438.").addText((text2) => {
+    new import_obsidian.Setting(containerEl).setName("\u041F\u0430\u043F\u043A\u0430 \u0434\u043B\u044F \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u044B\u0445 \u0437\u0430\u043C\u0435\u0442\u043E\u043A").setDesc("\u0414\u0438\u0440\u0435\u043A\u0442\u043E\u0440\u0438\u044F \u0432 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435, \u0432 \u043A\u043E\u0442\u043E\u0440\u0443\u044E \u0431\u0443\u0434\u0443\u0442 \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0442\u044C\u0441\u044F \u0441\u043E\u0437\u0434\u0430\u0432\u0430\u0435\u043C\u044B\u0435 \u043A\u0430\u043D\u043E\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0437\u0430\u043C\u0435\u0442\u043A\u0438.").addText((text2) => {
       text2.setPlaceholder("Concepts").setValue(this.plugin.settings.conceptsFolder).onChange(async (value) => {
         this.plugin.settings.conceptsFolder = value.trim() || "Concepts";
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian2.Setting(containerEl).setName("\u041C\u0438\u043D\u0438\u043C\u0430\u043B\u044C\u043D\u0430\u044F \u0434\u043B\u0438\u043D\u0430 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430").setDesc("\u041C\u0438\u043D\u0438\u043C\u0430\u043B\u044C\u043D\u043E\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0441\u0438\u043C\u0432\u043E\u043B\u043E\u0432 \u0432 \u0430\u0431\u0437\u0430\u0446\u0435 \u0434\u043B\u044F \u0432\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F \u0432 \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u044B\u0439 \u0430\u043D\u0430\u043B\u0438\u0437 (\u0444\u0438\u043B\u044C\u0442\u0440 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0445 \u0444\u0440\u0430\u0437).").addText((text2) => {
+    new import_obsidian.Setting(containerEl).setName("\u041C\u0438\u043D\u0438\u043C\u0430\u043B\u044C\u043D\u0430\u044F \u0434\u043B\u0438\u043D\u0430 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430").setDesc("\u041C\u0438\u043D\u0438\u043C\u0430\u043B\u044C\u043D\u043E\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0441\u0438\u043C\u0432\u043E\u043B\u043E\u0432 \u0432 \u0430\u0431\u0437\u0430\u0446\u0435 \u0434\u043B\u044F \u0432\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F \u0432 \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u044B\u0439 \u0430\u043D\u0430\u043B\u0438\u0437 (\u0444\u0438\u043B\u044C\u0442\u0440 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0445 \u0444\u0440\u0430\u0437).").addText((text2) => {
       text2.setPlaceholder("40").setValue(String(this.plugin.settings.minChunkLength)).onChange(async (value) => {
         const num = parseInt(value, 10);
         if (!isNaN(num) && num > 0) {
@@ -96,7 +95,7 @@ var SemanticGardenerSettingTab = class extends import_obsidian2.PluginSettingTab
         }
       });
     });
-    new import_obsidian2.Setting(containerEl).setName("\u0418\u0441\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044B\u0435 \u043F\u0430\u043F\u043A\u0438").setDesc("\u041F\u0430\u043F\u043A\u0438, \u0440\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u043D\u044B\u0435 \u0437\u0430\u043F\u044F\u0442\u044B\u043C\u0438, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043D\u0435 \u0431\u0443\u0434\u0443\u0442 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u044B.").addTextArea((text2) => {
+    new import_obsidian.Setting(containerEl).setName("\u0418\u0441\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044B\u0435 \u043F\u0430\u043F\u043A\u0438").setDesc("\u041F\u0430\u043F\u043A\u0438, \u0440\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u043D\u044B\u0435 \u0437\u0430\u043F\u044F\u0442\u044B\u043C\u0438, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043D\u0435 \u0431\u0443\u0434\u0443\u0442 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u044B.").addTextArea((text2) => {
       text2.setPlaceholder(".obsidian, .trash, templates, archive").setValue(this.plugin.settings.excludedFolders).onChange(async (value) => {
         this.plugin.settings.excludedFolders = value;
         await this.plugin.saveSettings();
@@ -104,7 +103,7 @@ var SemanticGardenerSettingTab = class extends import_obsidian2.PluginSettingTab
       text2.inputEl.rows = 2;
       text2.inputEl.cols = 30;
     });
-    new import_obsidian2.Setting(containerEl).setName("\u041B\u0438\u043C\u0438\u0442 \u0438\u0441\u0442\u043E\u0440\u0438\u0438 \u043E\u0442\u043A\u0430\u0442\u0430").setDesc("\u041C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u043E\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0438\u0439 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \u043E\u0442\u043A\u0430\u0442\u0430.").addText((text2) => {
+    new import_obsidian.Setting(containerEl).setName("\u041B\u0438\u043C\u0438\u0442 \u0438\u0441\u0442\u043E\u0440\u0438\u0438 \u043E\u0442\u043A\u0430\u0442\u0430").setDesc("\u041C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u043E\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0438\u0439 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \u043E\u0442\u043A\u0430\u0442\u0430.").addText((text2) => {
       text2.setPlaceholder("20").setValue(String(this.plugin.settings.maxHistoryLength)).onChange(async (value) => {
         const num = parseInt(value, 10);
         if (!isNaN(num) && num > 0) {
@@ -114,7 +113,7 @@ var SemanticGardenerSettingTab = class extends import_obsidian2.PluginSettingTab
         }
       });
     });
-    new import_obsidian2.Setting(containerEl).setName("\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u044B\u0439 \u043A\u044D\u0448").setDesc("\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043D\u044B\u0435 \u0432\u0435\u043A\u0442\u043E\u0440\u044B \u0438 \u0438\u043D\u0434\u0435\u043A\u0441 \u0438\u0437 IndexedDB \u0434\u043B\u044F \u043F\u043E\u043B\u043D\u043E\u0439 \u043F\u0435\u0440\u0435\u0438\u043D\u0434\u0435\u043A\u0441\u0430\u0446\u0438\u0438.").addButton((button) => {
+    new import_obsidian.Setting(containerEl).setName("\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u044B\u0439 \u043A\u044D\u0448").setDesc("\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043D\u044B\u0435 \u0432\u0435\u043A\u0442\u043E\u0440\u044B \u0438 \u0438\u043D\u0434\u0435\u043A\u0441 \u0438\u0437 IndexedDB \u0434\u043B\u044F \u043F\u043E\u043B\u043D\u043E\u0439 \u043F\u0435\u0440\u0435\u0438\u043D\u0434\u0435\u043A\u0441\u0430\u0446\u0438\u0438.").addButton((button) => {
       button.setButtonText("\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u043A\u044D\u0448").setWarning().onClick(async () => {
         await this.plugin.vectorStorage.clearAll();
         button.setButtonText("\u041A\u044D\u0448 \u043E\u0447\u0438\u0449\u0435\u043D \u2713");
@@ -125,7 +124,7 @@ var SemanticGardenerSettingTab = class extends import_obsidian2.PluginSettingTab
 };
 
 // src/ui/RefactorView.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian2 = require("obsidian");
 
 // node_modules/esm-env/dev-fallback.js
 var node_env = globalThis.process?.env?.NODE_ENV;
@@ -537,6 +536,17 @@ https://svelte.dev/e/hydration_failed`);
     throw error;
   } else {
     throw new Error(`https://svelte.dev/e/hydration_failed`);
+  }
+}
+function lifecycle_legacy_only(name) {
+  if (dev_fallback_default) {
+    const error = new Error(`lifecycle_legacy_only
+\`${name}(...)\` cannot be used in runes mode
+https://svelte.dev/e/lifecycle_legacy_only`);
+    error.name = "Svelte error";
+    throw error;
+  } else {
+    throw new Error(`https://svelte.dev/e/lifecycle_legacy_only`);
   }
 }
 function props_invalid_value(key2) {
@@ -1449,11 +1459,11 @@ var Batch = class _Batch {
         this.#unlink();
         infinite_loop_guard();
       }
-      for (const root5 of this.#resolve()) {
+      for (const root6 of this.#resolve()) {
         try {
-          this.#traverse(root5, effects, render_effects);
+          this.#traverse(root6, effects, render_effects);
         } catch (e) {
-          reset_all(root5);
+          reset_all(root6);
           if (!this.#is_deferred()) this.discard();
           throw e;
         }
@@ -1530,9 +1540,9 @@ var Batch = class _Batch {
    * @param {Effect[]} effects
    * @param {Effect[]} render_effects
    */
-  #traverse(root5, effects, render_effects) {
-    root5.f ^= CLEAN;
-    var effect2 = root5.first;
+  #traverse(root6, effects, render_effects) {
+    root6.f ^= CLEAN;
+    var effect2 = root6.first;
     while (effect2 !== null) {
       var flags2 = effect2.f;
       var is_branch = (flags2 & (BRANCH_EFFECT | ROOT_EFFECT)) !== 0;
@@ -1777,8 +1787,8 @@ var Batch = class _Batch {
         }
         if (batch.#scheduled.length > 0 && !batch.#decrement_queued) {
           batch.apply();
-          for (var root5 of batch.#resolve()) {
-            batch.#traverse(root5, [], []);
+          for (var root6 of batch.#resolve()) {
+            batch.#traverse(root6, [], []);
           }
         }
         batch.deactivate();
@@ -3339,7 +3349,7 @@ function is_dirty(reaction) {
   }
   return false;
 }
-function schedule_possible_effect_self_invalidation(signal, effect2, root5 = true) {
+function schedule_possible_effect_self_invalidation(signal, effect2, root6 = true) {
   var reactions = signal.reactions;
   if (reactions === null) return;
   if (!async_mode_flag && current_sources !== null && current_sources.has(signal)) {
@@ -3355,7 +3365,7 @@ function schedule_possible_effect_self_invalidation(signal, effect2, root5 = tru
         false
       );
     } else if (effect2 === reaction) {
-      if (root5) {
+      if (root6) {
         set_signal_status(reaction, DIRTY);
       } else if ((reaction.f & CLEAN) !== 0) {
         set_signal_status(reaction, MAYBE_DIRTY);
@@ -5425,16 +5435,16 @@ function validate_each_keys(array, key_fn) {
 function append_styles(anchor, css) {
   effect(() => {
     anchor = active_effect?.parent?.nodes?.start ?? anchor;
-    var root5 = anchor.getRootNode();
+    var root6 = anchor.getRootNode();
     var target = (
       /** @type {ShadowRoot} */
-      root5.host ? (
+      root6.host ? (
         /** @type {ShadowRoot} */
-        root5
+        root6
       ) : (
         /** @type {Document} */
-        root5.head ?? /** @type {Document} */
-        root5.ownerDocument.head
+        root6.head ?? /** @type {Document} */
+        root6.ownerDocument.head
       )
     );
     if (!target.querySelector("#" + css.hash)) {
@@ -5476,6 +5486,99 @@ function to_class(value, hash2, directives) {
   }
   return classname === "" ? null : classname;
 }
+function append_styles2(styles, important = false) {
+  var separator = important ? " !important;" : ";";
+  var css = "";
+  for (var key2 of Object.keys(styles)) {
+    var value = styles[key2];
+    if (value != null && value !== "") {
+      css += " " + key2 + ": " + value + separator;
+    }
+  }
+  return css;
+}
+function to_css_name(name) {
+  if (name[0] !== "-" || name[1] !== "-") {
+    return name.toLowerCase();
+  }
+  return name;
+}
+function to_style(value, styles) {
+  if (styles) {
+    var new_style = "";
+    var normal_styles;
+    var important_styles;
+    if (Array.isArray(styles)) {
+      normal_styles = styles[0];
+      important_styles = styles[1];
+    } else {
+      normal_styles = styles;
+    }
+    if (value) {
+      value = String(value).replaceAll(/\/\*.*?\*\//g, "").trim();
+      var in_str = false;
+      var in_apo = 0;
+      var in_comment = false;
+      var reserved_names = [];
+      if (normal_styles) {
+        reserved_names.push(...Object.keys(normal_styles).map(to_css_name));
+      }
+      if (important_styles) {
+        reserved_names.push(...Object.keys(important_styles).map(to_css_name));
+      }
+      var start_index = 0;
+      var name_index = -1;
+      const len = value.length;
+      for (var i = 0; i < len; i++) {
+        var c = value[i];
+        if (in_comment) {
+          if (c === "/" && value[i - 1] === "*") {
+            in_comment = false;
+          }
+        } else if (in_str) {
+          if (in_str === c) {
+            in_str = false;
+          }
+        } else if (c === "/" && value[i + 1] === "*") {
+          in_comment = true;
+        } else if (c === '"' || c === "'") {
+          in_str = c;
+        } else if (c === "(") {
+          in_apo++;
+        } else if (c === ")") {
+          in_apo--;
+        }
+        if (!in_comment && in_str === false && in_apo === 0) {
+          if (c === ":" && name_index === -1) {
+            name_index = i;
+          } else if (c === ";" || i === len - 1) {
+            if (name_index !== -1) {
+              var name = to_css_name(value.substring(start_index, name_index).trim());
+              if (!reserved_names.includes(name)) {
+                if (c !== ";") {
+                  i++;
+                }
+                var property = value.substring(start_index, i).trim();
+                new_style += " " + property + ";";
+              }
+            }
+            start_index = i + 1;
+            name_index = -1;
+          }
+        }
+      }
+    }
+    if (normal_styles) {
+      new_style += append_styles2(normal_styles);
+    }
+    if (important_styles) {
+      new_style += append_styles2(important_styles, true);
+    }
+    new_style = new_style.trim();
+    return new_style === "" ? null : new_style;
+  }
+  return value == null ? null : String(value);
+}
 
 // node_modules/svelte/src/internal/client/dom/elements/class.js
 function set_class(dom, is_html, value, hash2, prev_classes, next_classes) {
@@ -5504,6 +5607,45 @@ function set_class(dom, is_html, value, hash2, prev_classes, next_classes) {
     }
   }
   return next_classes;
+}
+
+// node_modules/svelte/src/internal/client/dom/elements/style.js
+function update_styles(dom, prev = {}, next2, priority) {
+  for (var key2 in next2) {
+    var value = next2[key2];
+    if (prev[key2] !== value) {
+      if (next2[key2] == null) {
+        dom.style.removeProperty(key2);
+      } else {
+        dom.style.setProperty(key2, value, priority);
+      }
+    }
+  }
+}
+function set_style(dom, value, prev_styles, next_styles) {
+  var prev = (
+    /** @type {any} */
+    dom[STYLE_CACHE]
+  );
+  if (hydrating || prev !== value) {
+    var next_style_attr = to_style(value, next_styles);
+    if (!hydrating || next_style_attr !== dom.getAttribute("style")) {
+      if (next_style_attr == null) {
+        dom.removeAttribute("style");
+      } else {
+        dom.style.cssText = next_style_attr;
+      }
+    }
+    dom[STYLE_CACHE] = value;
+  } else if (next_styles) {
+    if (Array.isArray(next_styles)) {
+      update_styles(dom, prev_styles?.[0], next_styles[0]);
+      update_styles(dom, prev_styles?.[1], next_styles[1], "important");
+    } else {
+      update_styles(dom, prev_styles, next_styles);
+    }
+  }
+  return next_styles;
 }
 
 // node_modules/svelte/src/internal/client/dom/elements/attributes.js
@@ -5691,6 +5833,54 @@ function is_numberlike_input(input) {
 }
 function to_number(value) {
   return value === "" ? null : +value;
+}
+
+// node_modules/svelte/src/internal/client/dom/elements/bindings/this.js
+function is_bound_this(bound_value, element_or_component) {
+  return bound_value === element_or_component || bound_value?.[STATE_SYMBOL] === element_or_component;
+}
+function bind_this(element_or_component = mark_as_component(), update2, get_value, get_parts) {
+  var component_effect = (
+    /** @type {ComponentContext} */
+    component_context.r
+  );
+  var parent = (
+    /** @type {Effect} */
+    active_effect
+  );
+  effect(() => {
+    var old_parts;
+    var parts;
+    render_effect(() => {
+      old_parts = parts;
+      parts = get_parts?.() || [];
+      untrack(() => {
+        if (!is_bound_this(get_value(...parts), element_or_component)) {
+          update2(element_or_component, ...parts);
+          if (old_parts && is_bound_this(get_value(...old_parts), element_or_component)) {
+            update2(null, ...old_parts);
+          }
+        }
+      });
+    });
+    return () => {
+      let p = parent;
+      while (p !== component_effect && p.parent !== null && p.parent.f & DESTROYING) {
+        p = p.parent;
+      }
+      const teardown2 = () => {
+        if (parts && is_bound_this(get_value(...parts), element_or_component)) {
+          update2(null, ...parts);
+        }
+      };
+      const original_teardown = p.teardown;
+      p.teardown = () => {
+        teardown2();
+        original_teardown?.();
+      };
+    };
+  });
+  return element_or_component;
 }
 
 // node_modules/svelte/src/internal/client/dom/legacy/lifecycle.js
@@ -6257,6 +6447,15 @@ function onMount(fn) {
       );
     });
   }
+}
+function afterUpdate(fn) {
+  if (component_context === null) {
+    lifecycle_outside_component("afterUpdate");
+  }
+  if (component_context.l === null) {
+    lifecycle_legacy_only("afterUpdate");
+  }
+  init_update_callbacks(component_context).a.push(fn);
 }
 function init_update_callbacks(context) {
   var l = (
@@ -7140,41 +7339,268 @@ function DiffCard($$anchor, $$props) {
   pop();
 }
 
+// src/ui/components/LogPanel.svelte
+var root4 = from_html(`<span class="sg-pulse-indicator svelte-jl399r"></span>`);
+var root_14 = from_html(`<span class="sg-done-icon svelte-jl399r">\u2713</span>`);
+var root_24 = from_html(`<button class="sg-btn-cancel svelte-jl399r" title="\u041E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0435 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0438">\u23F9 \u041E\u0442\u043C\u0435\u043D\u0430</button>`);
+var root_34 = from_html(`<button class="sg-btn-clear-logs svelte-jl399r" title="\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u0438\u0441\u0442\u043E\u0440\u0438\u044E \u043B\u043E\u0433\u043E\u0432">\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C</button>`);
+var root_42 = from_html(`<div class="sg-log-empty svelte-jl399r">\u0416\u0443\u0440\u043D\u0430\u043B \u043F\u0443\u0441\u0442. \u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u044E \u0434\u043B\u044F \u043E\u0442\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u044F \u0441\u043E\u0431\u044B\u0442\u0438\u0439.</div>`);
+var root_52 = from_html(`<div class="sg-log-details svelte-jl399r"> </div>`);
+var root_6 = from_html(`<div><span class="sg-log-time svelte-jl399r"> </span> <span class="sg-log-level svelte-jl399r"> </span> <span class="sg-log-msg svelte-jl399r"> </span> <!></div>`);
+var root_7 = from_html(`<div class="sg-console-body svelte-jl399r"><!></div>`);
+var root_8 = from_html(`<div class="sg-log-panel-wrapper svelte-jl399r"><div><div class="sg-progress-header svelte-jl399r"><div class="sg-progress-status-box svelte-jl399r"><!> <span class="sg-phase-tag svelte-jl399r"> </span> <span class="sg-progress-text svelte-jl399r"> </span></div> <div class="sg-progress-controls svelte-jl399r"><span class="sg-percentage-badge svelte-jl399r"> </span> <!></div></div> <div class="sg-progress-track svelte-jl399r"><div></div></div></div> <div class="sg-console-drawer svelte-jl399r"><div class="sg-console-header svelte-jl399r"><button class="sg-toggle-btn svelte-jl399r"><span class="sg-toggle-arrow svelte-jl399r"> </span> <span class="sg-console-title svelte-jl399r">\u0416\u0443\u0440\u043D\u0430\u043B \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0432</span> <span class="sg-log-count-pill svelte-jl399r"> </span></button> <div class="sg-console-header-actions svelte-jl399r"><button class="sg-btn-open-log svelte-jl399r" title="\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u0444\u0430\u0439\u043B debug.log \u0441 \u0438\u0441\u0442\u043E\u0440\u0438\u0435\u0439 \u0438 \u0441\u0442\u0440\u043E\u043A\u0430\u043C\u0438 \u043E\u0448\u0438\u0431\u043E\u043A">\u{1F4C4} debug.log</button> <!></div></div> <!></div></div>`);
+var $$css4 = {
+  hash: "svelte-jl399r",
+  code: ".sg-log-panel-wrapper.svelte-jl399r {background-color:var(--background-secondary);border-bottom:1px solid var(--background-modifier-border);display:flex;flex-direction:column;font-size:0.85em;}\n\n  /* Progress Section */.sg-progress-section.svelte-jl399r {padding:8px 14px 10px 14px;background-color:var(--background-secondary-alt);transition:background-color 0.2s ease;}.sg-progress-section.active.svelte-jl399r {background-color:rgba(var(--interactive-accent-rgb, 100, 100, 255), 0.06);}.sg-progress-header.svelte-jl399r {display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}.sg-progress-status-box.svelte-jl399r {display:flex;align-items:center;gap:8px;flex:1 1 200px;min-width:0;}.sg-pulse-indicator.svelte-jl399r {width:8px;height:8px;border-radius:50%;background-color:var(--interactive-accent);box-shadow:0 0 8px var(--interactive-accent);\n    animation: svelte-jl399r-sg-pulse 1.2s infinite ease-in-out;flex-shrink:0;}.sg-done-icon.svelte-jl399r {color:var(--text-success, #3fb950);font-weight:700;flex-shrink:0;}\n\n  @keyframes svelte-jl399r-sg-pulse {\n    0%, 100% { transform: scale(0.9); opacity: 0.6; }\n    50% { transform: scale(1.3); opacity: 1; }\n  }.sg-phase-tag.svelte-jl399r {font-weight:600;padding:1px 6px;border-radius:4px;background-color:var(--background-modifier-border);color:var(--text-normal);font-size:0.85em;white-space:nowrap;}.sg-progress-text.svelte-jl399r {color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.9em;}.sg-progress-controls.svelte-jl399r {display:flex;align-items:center;gap:8px;flex-shrink:0;}.sg-percentage-badge.svelte-jl399r {font-weight:700;font-size:0.9em;color:var(--interactive-accent);min-width:38px;text-align:right;font-family:var(--font-monospace);}.sg-btn-cancel.svelte-jl399r {padding:3px 8px;border-radius:4px;border:1px solid rgba(248, 81, 73, 0.4);background-color:rgba(248, 81, 73, 0.1);color:var(--text-error, #f85149);cursor:pointer;font-size:0.82em;font-weight:500;transition:all 0.15s ease;}.sg-btn-cancel.svelte-jl399r:hover {background-color:rgba(248, 81, 73, 0.25);border-color:var(--text-error, #f85149);}\n\n  /* Progress Track & Fill */.sg-progress-track.svelte-jl399r {width:100%;height:6px;border-radius:3px;background-color:var(--background-modifier-border);overflow:hidden;position:relative;}.sg-progress-fill.svelte-jl399r {height:100%;background-color:var(--interactive-accent);border-radius:3px;transition:width 0.25s cubic-bezier(0.4, 0, 0.2, 1);}.sg-progress-fill.is-active.svelte-jl399r {background:linear-gradient(90deg, var(--interactive-accent), #48bb78);}.sg-progress-fill.is-done.svelte-jl399r {background-color:var(--text-success, #3fb950);}\n\n  /* Console Drawer */.sg-console-drawer.svelte-jl399r {border-top:1px solid var(--background-modifier-border);}.sg-console-header.svelte-jl399r {display:flex;justify-content:space-between;align-items:center;padding:3px 12px;background:transparent;}.sg-toggle-btn.svelte-jl399r {display:flex;align-items:center;gap:6px;background:transparent;border:none;cursor:pointer;color:var(--text-muted);font-size:0.82em;padding:4px 0;transition:color 0.15s ease;}.sg-toggle-btn.svelte-jl399r:hover {color:var(--text-normal);}.sg-toggle-arrow.svelte-jl399r {font-size:0.75em;width:10px;}.sg-console-title.svelte-jl399r {font-weight:500;}.sg-log-count-pill.svelte-jl399r {padding:0 5px;border-radius:8px;background-color:var(--background-modifier-border);font-size:0.85em;color:var(--text-muted);}.sg-console-header-actions.svelte-jl399r {display:flex;align-items:center;gap:6px;}.sg-btn-open-log.svelte-jl399r {padding:1px 6px;border-radius:3px;border:1px solid var(--background-modifier-border);background:transparent;color:var(--text-muted);font-size:0.78em;cursor:pointer;transition:all 0.15s ease;}.sg-btn-open-log.svelte-jl399r:hover {background-color:var(--background-modifier-hover);color:var(--interactive-accent);border-color:var(--interactive-accent);}.sg-btn-clear-logs.svelte-jl399r {padding:1px 6px;border-radius:3px;border:1px solid var(--background-modifier-border);background:transparent;color:var(--text-muted);font-size:0.78em;cursor:pointer;transition:all 0.15s ease;}.sg-btn-clear-logs.svelte-jl399r:hover {background-color:var(--background-modifier-hover);color:var(--text-normal);}.sg-console-body.svelte-jl399r {max-height:150px;overflow-y:auto;padding:6px 12px;background-color:var(--background-primary-alt);font-family:var(--font-monospace);font-size:0.82em;line-height:1.45;border-top:1px solid var(--background-modifier-border);}.sg-log-empty.svelte-jl399r {color:var(--text-muted);font-style:italic;padding:6px 0;}.sg-log-entry.svelte-jl399r {display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;padding:2px 0;border-bottom:1px dashed rgba(255, 255, 255, 0.04);}.sg-log-time.svelte-jl399r {color:var(--text-muted);opacity:0.75;font-size:0.9em;}.sg-log-level.svelte-jl399r {font-weight:600;font-size:0.85em;}.sg-log-msg.svelte-jl399r {word-break:break-word;flex:1 1 auto;}.log-info.svelte-jl399r .sg-log-level:where(.svelte-jl399r) {color:var(--text-accent);}.log-success.svelte-jl399r .sg-log-level:where(.svelte-jl399r) {color:var(--text-success, #3fb950);}.log-warn.svelte-jl399r .sg-log-level:where(.svelte-jl399r) {color:var(--text-warning, #d29922);}.log-error.svelte-jl399r .sg-log-level:where(.svelte-jl399r) {color:var(--text-error, #f85149);}.log-progress.svelte-jl399r .sg-log-level:where(.svelte-jl399r) {color:var(--text-accent);}.sg-log-details.svelte-jl399r {width:100%;margin-left:18px;font-size:0.88em;color:var(--text-muted);white-space:pre-wrap;}"
+};
+function LogPanel($$anchor, $$props) {
+  push($$props, false);
+  append_styles($$anchor, $$css4);
+  let logger = prop($$props, "logger", 8, void 0);
+  let onCancelScan = prop($$props, "onCancelScan", 8, void 0);
+  let logs = mutable_source([]);
+  let progress = mutable_source({
+    phase: "\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435",
+    percentage: 0,
+    message: "\u0413\u043E\u0442\u043E\u0432 \u043A \u0440\u0430\u0431\u043E\u0442\u0435",
+    isScanning: false,
+    canCancel: false
+  });
+  let isExpanded = mutable_source(false);
+  let logContainerEl = mutable_source(null);
+  let autoScroll = true;
+  onMount(() => {
+    if (logger()) {
+      const unsubscribe = logger().subscribe((state2) => {
+        set(logs, state2.logs);
+        set(progress, state2.progress);
+        if (get(progress).isScanning && !get(isExpanded)) {
+          set(isExpanded, true);
+        }
+      });
+      return unsubscribe;
+    }
+  });
+  afterUpdate(() => {
+    if (autoScroll && get(logContainerEl) && get(isExpanded)) {
+      mutate(logContainerEl, get(logContainerEl).scrollTop = get(logContainerEl).scrollHeight);
+    }
+  });
+  function handleScroll() {
+    if (!get(logContainerEl)) return;
+    const threshold = 30;
+    const isAtBottom = get(logContainerEl).scrollHeight - get(logContainerEl).scrollTop - get(logContainerEl).clientHeight < threshold;
+    autoScroll = isAtBottom;
+  }
+  function handleClear(e) {
+    e.stopPropagation();
+    if (logger()) {
+      logger().clearLogs();
+    }
+  }
+  function toggleExpanded() {
+    set(isExpanded, !get(isExpanded));
+    if (get(isExpanded)) {
+      autoScroll = true;
+    }
+  }
+  async function handleOpenLogFile(e) {
+    e.stopPropagation();
+    if (logger()) {
+      await logger().openLogFile();
+    }
+  }
+  init();
+  var div = root_8();
+  var div_1 = child(div);
+  let classes;
+  var div_2 = child(div_1);
+  var div_3 = child(div_2);
+  var node = child(div_3);
+  {
+    var consequent = ($$anchor2) => {
+      var span = root4();
+      append($$anchor2, span);
+    };
+    var consequent_1 = ($$anchor2) => {
+      var span_1 = root_14();
+      append($$anchor2, span_1);
+    };
+    if_block(node, ($$render) => {
+      if (get(progress), untrack(() => get(progress).isScanning)) $$render(consequent);
+      else if (get(progress), untrack(() => get(progress).percentage === 100)) $$render(consequent_1, 1);
+    });
+  }
+  var span_2 = sibling(node, 2);
+  var text2 = only_child(span_2, true);
+  var span_3 = sibling(span_2, 2);
+  var text_1 = only_child(span_3, true);
+  reset(div_3);
+  var div_4 = sibling(div_3, 2);
+  var span_4 = child(div_4);
+  var text_2 = only_child(span_4);
+  var node_1 = sibling(span_4, 2);
+  {
+    var consequent_2 = ($$anchor2) => {
+      var button = root_24();
+      event("click", button, function(...$$args) {
+        onCancelScan()?.apply(this, $$args);
+      });
+      append($$anchor2, button);
+    };
+    if_block(node_1, ($$render) => {
+      if (get(progress), deep_read_state(onCancelScan()), untrack(() => get(progress).isScanning && get(progress).canCancel && onCancelScan())) $$render(consequent_2);
+    });
+  }
+  reset(div_4);
+  reset(div_2);
+  var div_5 = sibling(div_2, 2);
+  var div_6 = child(div_5);
+  let classes_1;
+  reset(div_5);
+  reset(div_1);
+  var div_7 = sibling(div_1, 2);
+  var div_8 = child(div_7);
+  var button_1 = child(div_8);
+  var span_5 = child(button_1);
+  var text_3 = only_child(span_5, true);
+  var span_6 = sibling(span_5, 4);
+  var text_4 = only_child(span_6, true);
+  reset(button_1);
+  var div_9 = sibling(button_1, 2);
+  var button_2 = child(div_9);
+  var node_2 = sibling(button_2, 2);
+  {
+    var consequent_3 = ($$anchor2) => {
+      var button_3 = root_34();
+      event("click", button_3, handleClear);
+      append($$anchor2, button_3);
+    };
+    if_block(node_2, ($$render) => {
+      if (get(logs), untrack(() => get(logs).length > 0)) $$render(consequent_3);
+    });
+  }
+  reset(div_9);
+  reset(div_8);
+  var node_3 = sibling(div_8, 2);
+  {
+    var consequent_6 = ($$anchor2) => {
+      var div_10 = root_7();
+      var node_4 = child(div_10);
+      {
+        var consequent_4 = ($$anchor3) => {
+          var div_11 = root_42();
+          append($$anchor3, div_11);
+        };
+        var alternate = ($$anchor3) => {
+          var fragment = comment();
+          var node_5 = first_child(fragment);
+          each(node_5, 1, () => get(logs), (log) => log.id, ($$anchor4, log) => {
+            var div_12 = root_6();
+            var span_7 = child(div_12);
+            var text_5 = only_child(span_7, true);
+            var span_8 = sibling(span_7, 2);
+            var text_6 = only_child(span_8);
+            var span_9 = sibling(span_8, 2);
+            var text_7 = only_child(span_9, true);
+            var node_6 = sibling(span_9, 2);
+            {
+              var consequent_5 = ($$anchor5) => {
+                var div_13 = root_52();
+                var text_8 = only_child(div_13, true);
+                template_effect(() => set_text(text_8, (get(log), untrack(() => get(log).details))));
+                append($$anchor5, div_13);
+              };
+              if_block(node_6, ($$render) => {
+                if (get(log), untrack(() => get(log).details)) $$render(consequent_5);
+              });
+            }
+            reset(div_12);
+            template_effect(
+              ($0) => {
+                set_class(div_12, 1, `sg-log-entry log-${(get(log), untrack(() => get(log).level)) ?? ""}`, "svelte-jl399r");
+                set_text(text_5, (get(log), untrack(() => get(log).timestamp)));
+                set_text(text_6, `[${$0 ?? ""}]`);
+                set_text(text_7, (get(log), untrack(() => get(log).message)));
+              },
+              [
+                () => (get(log), untrack(() => get(log).level.toUpperCase()))
+              ]
+            );
+            append($$anchor4, div_12);
+          });
+          append($$anchor3, fragment);
+        };
+        if_block(node_4, ($$render) => {
+          if (get(logs), untrack(() => get(logs).length === 0)) $$render(consequent_4);
+          else $$render(alternate, -1);
+        });
+      }
+      reset(div_10);
+      bind_this(div_10, ($$value) => set(logContainerEl, $$value), () => get(logContainerEl));
+      event("scroll", div_10, handleScroll);
+      append($$anchor2, div_10);
+    };
+    if_block(node_3, ($$render) => {
+      if (get(isExpanded)) $$render(consequent_6);
+    });
+  }
+  reset(div_7);
+  reset(div);
+  template_effect(() => {
+    classes = set_class(div_1, 1, "sg-progress-section svelte-jl399r", null, classes, { active: get(progress).isScanning });
+    set_text(text2, (get(progress), untrack(() => get(progress).phase)));
+    set_attribute2(span_3, "title", (get(progress), untrack(() => get(progress).message)));
+    set_text(text_1, (get(progress), untrack(() => get(progress).message)));
+    set_text(text_2, `${(get(progress), untrack(() => get(progress).percentage)) ?? ""}%`);
+    classes_1 = set_class(div_6, 1, "sg-progress-fill svelte-jl399r", null, classes_1, {
+      "is-active": get(progress).isScanning,
+      "is-done": get(progress).percentage === 100
+    });
+    set_style(div_6, `width: ${(get(progress), untrack(() => get(progress).percentage)) ?? ""}%`);
+    set_attribute2(button_1, "aria-expanded", get(isExpanded));
+    set_text(text_3, get(isExpanded) ? "\u25BC" : "\u25B6");
+    set_text(text_4, (get(logs), untrack(() => get(logs).length)));
+  });
+  event("click", button_1, toggleExpanded);
+  event("click", button_2, handleOpenLogFile);
+  append($$anchor, div);
+  pop();
+}
+
 // src/ui/components/ReviewModal.svelte
-var root4 = from_html(`<span class="scanning-indicator svelte-71f0fw"><span class="spinner svelte-71f0fw"></span> </span>`);
-var root_14 = from_html(`<button class="sg-btn svelte-71f0fw" title="\u041F\u043E\u0438\u0441\u043A \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0434\u043B\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438">\u{1F4C4} \u0410\u043A\u0442\u0438\u0432\u043D\u0430\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0430</button> <button class="sg-btn sg-btn-primary svelte-71f0fw" title="\u041F\u043E\u043B\u043D\u043E\u0435 \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430">\u{1F50D} \u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C Vault</button>`, 1);
-var root_24 = from_html(`<p>\u0412\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430...</p>`);
-var root_34 = from_html(`<p>\u0414\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0438\u043B\u0438 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u0435\u0449\u0435 \u043D\u0435 \u043F\u0440\u043E\u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043E.</p> <button class="sg-btn sg-btn-sm svelte-71f0fw">\u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435</button>`, 1);
-var root_42 = from_html(`<div class="empty-clusters svelte-71f0fw"><!></div>`);
-var root_52 = from_html(`<div class="empty-selection svelte-71f0fw"><div class="empty-icon svelte-71f0fw">\u{1F33F}</div> <h3>\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0434\u043B\u044F \u0440\u0435\u0432\u0438\u0437\u0438\u0438</h3> <p>\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u0438\u0437 \u0441\u043F\u0438\u0441\u043A\u0430 \u0441\u043B\u0435\u0432\u0430, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442,
-            \u043F\u043E\u0441\u043B\u043E\u0432\u043D\u044B\u0439 diff \u0438 \u043D\u0430\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0443\u044E \u0437\u0430\u043C\u0435\u043D\u0443.</p></div>`);
-var root_6 = from_html(`<div class="gatekeeper-banner approved svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u2713</span> <div><strong>LLM Gatekeeper:</strong> \u0421\u043C\u044B\u0441\u043B\u043E\u0432\u043E\u0435 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u043E.
-                    \u0421\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u043D \u043F\u043B\u0430\u043D \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u043F\u0440\u0430\u0432\u043E\u043A.</div></div>`);
-var root_7 = from_html(`<div class="gatekeeper-banner rejected svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u2715</span> <div><strong>LLM Gatekeeper \u043E\u0442\u043A\u043B\u043E\u043D\u0438\u043B \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435:</strong> </div></div>`);
-var root_8 = from_html(`<div class="gatekeeper-banner pending svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u23F3</span> <div><strong>\u0410\u043D\u0430\u043B\u0438\u0437 \u0432 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u0435:</strong> \u041E\u0442\u043F\u0440\u0430\u0432\u043A\u0430 \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432 \u0432 Gemini
-                  3.5 Flash...</div></div>`);
-var root_9 = from_html(`<div class="no-mods svelte-71f0fw"><p>\u0414\u043B\u044F \u0434\u0430\u043D\u043D\u043E\u0433\u043E \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 \u043D\u0435\u0442 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0430\u0432\u043E\u043A (\u0438\u043B\u0438 \u043A\u043B\u0430\u0441\u0442\u0435\u0440
-                      \u0431\u044B\u043B \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D Gatekeeper).</p></div>`);
-var root_10 = from_html(`<div class="modifications-list svelte-71f0fw"><!></div>`);
-var root_11 = from_html(`<div class="note-preview-pane svelte-71f0fw"><label for="atomic-note-textarea" class="concept-label svelte-71f0fw">\u0421\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435 \u043D\u043E\u0432\u043E\u0439 \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 (Markdown):</label> <textarea id="atomic-note-textarea" class="atomic-note-editor svelte-71f0fw" rows="12" placeholder="# \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435
+var root5 = from_html(`<p>\u0412\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430...</p>`);
+var root_15 = from_html(`<p>\u0414\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0438\u043B\u0438 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u0435\u0449\u0435 \u043D\u0435 \u043F\u0440\u043E\u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043E.</p> <button class="sg-btn sg-btn-sm svelte-71f0fw">\u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435</button>`, 1);
+var root_25 = from_html(`<div class="empty-clusters svelte-71f0fw"><!></div>`);
+var root_35 = from_html(`<div class="empty-selection svelte-71f0fw"><div class="empty-icon svelte-71f0fw">\u{1F33F}</div> <h3>\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0434\u043B\u044F \u0440\u0435\u0432\u0438\u0437\u0438\u0438</h3> <p>\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u0438\u0437 \u0441\u043F\u0438\u0441\u043A\u0430 \u0441\u043B\u0435\u0432\u0430, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442,
+              \u043F\u043E\u0441\u043B\u043E\u0432\u043D\u044B\u0439 diff \u0438 \u043D\u0430\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0443\u044E \u0437\u0430\u043C\u0435\u043D\u0443.</p></div>`);
+var root_43 = from_html(`<div class="gatekeeper-banner approved svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u2713</span> <div><strong>LLM Gatekeeper:</strong> \u0421\u043C\u044B\u0441\u043B\u043E\u0432\u043E\u0435 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u043E.
+                      \u0421\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u043D \u043F\u043B\u0430\u043D \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u043F\u0440\u0430\u0432\u043E\u043A.</div></div>`);
+var root_53 = from_html(`<div class="gatekeeper-banner rejected svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u2715</span> <div><strong>LLM Gatekeeper \u043E\u0442\u043A\u043B\u043E\u043D\u0438\u043B \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435:</strong> </div></div>`);
+var root_62 = from_html(`<div class="gatekeeper-banner pending svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u23F3</span> <div><strong>\u0410\u043D\u0430\u043B\u0438\u0437 \u0432 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u0435:</strong> \u041E\u0442\u043F\u0440\u0430\u0432\u043A\u0430 \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432 \u0432 Gemini...</div></div>`);
+var root_72 = from_html(`<div class="no-mods svelte-71f0fw"><p>\u0414\u043B\u044F \u0434\u0430\u043D\u043D\u043E\u0433\u043E \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 \u043D\u0435\u0442 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0430\u0432\u043E\u043A (\u0438\u043B\u0438 \u043A\u043B\u0430\u0441\u0442\u0435\u0440
+                        \u0431\u044B\u043B \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D Gatekeeper).</p></div>`);
+var root_82 = from_html(`<div class="modifications-list svelte-71f0fw"><!></div>`);
+var root_9 = from_html(`<div class="note-preview-pane svelte-71f0fw"><label for="atomic-note-textarea" class="concept-label svelte-71f0fw">\u0421\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435 \u043D\u043E\u0432\u043E\u0439 \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 (Markdown):</label> <textarea id="atomic-note-textarea" class="atomic-note-editor svelte-71f0fw" rows="12" placeholder="# \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435
 
 \u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0432\u043E\u0439 \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438..."></textarea></div>`);
-var root_122 = from_html(`<div class="concept-workspace svelte-71f0fw"><div class="concept-header-box svelte-71f0fw"><!> <div class="concept-title-row svelte-71f0fw"><label for="concept-title-input" class="concept-label svelte-71f0fw">\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043A\u0430\u043D\u043E\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438:</label> <input id="concept-title-input" type="text" class="concept-title-input svelte-71f0fw" placeholder="\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440: \u0417\u0430\u043A\u043E\u043D \u041B\u0438\u0442\u0442\u043B\u0430"/></div> <div class="tab-bar svelte-71f0fw"><button> </button> <button>\u{1F4DD} \u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0432\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438</button></div></div> <div class="tab-content svelte-71f0fw"><!></div> <div class="concept-footer-actions svelte-71f0fw"><button class="sg-btn sg-btn-danger svelte-71f0fw" title="\u0418\u0441\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0438\u0437 \u043E\u0447\u0435\u0440\u0435\u0434\u0438">\u041E\u0442\u043A\u043B\u043E\u043D\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442</button> <div class="spacer svelte-71f0fw"></div> <button class="sg-btn sg-btn-primary sg-btn-large svelte-71f0fw" title="\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0437\u0430\u043C\u0435\u0442\u043A\u0443 \u0438 \u043F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0437\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 \u0441 \u0437\u0430\u043F\u0438\u0441\u044C\u044E \u0432 \u0436\u0443\u0440\u043D\u0430\u043B \u0438\u0441\u0442\u043E\u0440\u0438\u0438">\u{1F680} \u041F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433</button></div></div>`);
-var root_132 = from_html(`<div class="semantic-gardener-root svelte-71f0fw"><header class="sg-header svelte-71f0fw"><div class="sg-header-left svelte-71f0fw"><span class="sg-logo svelte-71f0fw">\u{1F331}</span> <h2 class="sg-title svelte-71f0fw">Semantic Gardener</h2> <span class="sg-badge svelte-71f0fw"> </span></div> <div class="sg-header-actions svelte-71f0fw"><!> <button class="sg-btn sg-btn-undo svelte-71f0fw" title="\u041E\u0442\u043A\u0430\u0442\u0438\u0442\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433 \u0432 1 \u043A\u043B\u0438\u043A"> </button></div></header> <div class="sg-body svelte-71f0fw"><aside class="sg-sidebar svelte-71f0fw"><div class="sidebar-header svelte-71f0fw"><span>\u041E\u0447\u0435\u0440\u0435\u0434\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432</span> <span class="count-pill svelte-71f0fw"> </span></div> <div class="cluster-list svelte-71f0fw"><!></div></aside> <main class="sg-main-content svelte-71f0fw"><!></main></div></div>`);
-var $$css4 = {
+var root_10 = from_html(`<div class="concept-workspace svelte-71f0fw"><div class="narrow-nav-row svelte-71f0fw"><button class="sg-btn sg-btn-sm svelte-71f0fw" title="\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u043A \u0441\u043F\u0438\u0441\u043A\u0443 \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432"> </button> <span class="narrow-concept-label svelte-71f0fw"> </span></div> <div class="concept-header-box svelte-71f0fw"><!> <div class="concept-title-row svelte-71f0fw"><label for="concept-title-input" class="concept-label svelte-71f0fw">\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043A\u0430\u043D\u043E\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438:</label> <input id="concept-title-input" type="text" class="concept-title-input svelte-71f0fw" placeholder="\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440: \u0417\u0430\u043A\u043E\u043D \u041B\u0438\u0442\u0442\u043B\u0430"/></div> <div class="tab-bar svelte-71f0fw"><button> </button> <button>\u{1F4DD} \u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0432\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438</button></div></div> <div class="tab-content svelte-71f0fw"><!></div> <div class="concept-footer-actions svelte-71f0fw"><button class="sg-btn sg-btn-danger svelte-71f0fw" title="\u0418\u0441\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0438\u0437 \u043E\u0447\u0435\u0440\u0435\u0434\u0438">\u041E\u0442\u043A\u043B\u043E\u043D\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442</button> <div class="spacer svelte-71f0fw"></div> <button class="sg-btn sg-btn-primary sg-btn-large svelte-71f0fw" title="\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0437\u0430\u043C\u0435\u0442\u043A\u0443 \u0438 \u043F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0437\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 \u0441 \u0437\u0430\u043F\u0438\u0441\u044C\u044E \u0432 \u0436\u0443\u0440\u043D\u0430\u043B \u0438\u0441\u0442\u043E\u0440\u0438\u0438">\u{1F680} \u041F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433</button></div></div>`);
+var root_11 = from_html(`<div class="semantic-gardener-container svelte-71f0fw"><div class="semantic-gardener-root svelte-71f0fw"><header class="sg-header svelte-71f0fw"><div class="sg-header-left svelte-71f0fw"><span class="sg-logo svelte-71f0fw">\u{1F331}</span> <h2 class="sg-title svelte-71f0fw">Semantic Gardener</h2> <span class="sg-badge svelte-71f0fw"> </span></div> <div class="sg-header-actions svelte-71f0fw"><button class="sg-btn svelte-71f0fw" title="\u041F\u043E\u0438\u0441\u043A \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0434\u043B\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438"><span class="btn-icon svelte-71f0fw">\u{1F4C4}</span> <span class="btn-text svelte-71f0fw">\u0410\u043A\u0442\u0438\u0432\u043D\u0430\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0430</span></button> <button class="sg-btn sg-btn-primary svelte-71f0fw" title="\u041F\u043E\u043B\u043D\u043E\u0435 \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430"><span class="btn-icon svelte-71f0fw">\u{1F50D}</span> <span class="btn-text svelte-71f0fw">\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C Vault</span></button> <button class="sg-btn sg-btn-undo svelte-71f0fw" title="\u041E\u0442\u043A\u0430\u0442\u0438\u0442\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433 \u0432 1 \u043A\u043B\u0438\u043A"><span class="btn-icon svelte-71f0fw">\u21A9</span> <span class="btn-text svelte-71f0fw"> </span></button></div></header> <!> <div><aside class="sg-sidebar svelte-71f0fw"><div class="sidebar-header svelte-71f0fw"><span>\u041E\u0447\u0435\u0440\u0435\u0434\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432</span> <span class="count-pill svelte-71f0fw"> </span></div> <div class="cluster-list svelte-71f0fw"><!></div></aside> <main class="sg-main-content svelte-71f0fw"><!></main></div></div></div>`);
+var $$css5 = {
   hash: "svelte-71f0fw",
-  code: ".semantic-gardener-root.svelte-71f0fw {display:flex;flex-direction:column;height:100%;width:100%;background-color:var(--background-primary);color:var(--text-normal);font-family:var(--font-text);overflow:hidden;}.sg-header.svelte-71f0fw {display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--background-modifier-border);background-color:var(--background-secondary-alt);flex-shrink:0;}.sg-header-left.svelte-71f0fw {display:flex;align-items:center;gap:10px;}.sg-logo.svelte-71f0fw {font-size:1.5em;}.sg-title.svelte-71f0fw {margin:0;font-size:1.25em;font-weight:700;}.sg-badge.svelte-71f0fw {font-size:0.78em;padding:2px 8px;border-radius:12px;background-color:var(--background-modifier-border);color:var(--text-muted);}.sg-header-actions.svelte-71f0fw {display:flex;align-items:center;gap:8px;}.sg-btn.svelte-71f0fw {padding:6px 12px;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-primary);color:var(--text-normal);cursor:pointer;font-size:0.85em;font-weight:500;transition:all 0.15s ease;}.sg-btn.svelte-71f0fw:hover:not(:disabled) {background-color:var(--background-modifier-hover);border-color:var(--interactive-accent);}.sg-btn.svelte-71f0fw:disabled {opacity:0.45;cursor:not-allowed;}.sg-btn-primary.svelte-71f0fw {background-color:var(--interactive-accent);color:var(--text-on-accent);border-color:var(--interactive-accent);}.sg-btn-primary.svelte-71f0fw:hover:not(:disabled) {background-color:var(--interactive-accent-hover);}.sg-btn-danger.svelte-71f0fw {color:var(--text-error, #f85149);border-color:rgba(248, 81, 73, 0.4);}.sg-btn-danger.svelte-71f0fw:hover {background-color:rgba(248, 81, 73, 0.15);}.sg-btn-undo.svelte-71f0fw {border-color:var(--background-modifier-border);}.sg-btn-large.svelte-71f0fw {padding:8px 18px;font-size:0.95em;font-weight:600;}.sg-btn-sm.svelte-71f0fw {padding:4px 8px;font-size:0.8em;}.scanning-indicator.svelte-71f0fw {display:flex;align-items:center;gap:8px;font-size:0.85em;color:var(--text-accent);}.spinner.svelte-71f0fw {width:14px;height:14px;border:2px solid var(--interactive-accent);border-top-color:transparent;border-radius:50%;\n    animation: svelte-71f0fw-spin 0.8s linear infinite;}\n\n  @keyframes svelte-71f0fw-spin {\n    to {\n      transform: rotate(360deg);\n    }\n  }.sg-body.svelte-71f0fw {display:flex;flex:1;overflow:hidden;}\n\n  /* Left Sidebar */.sg-sidebar.svelte-71f0fw {width:320px;border-right:1px solid var(--background-modifier-border);display:flex;flex-direction:column;background-color:var(--background-secondary);flex-shrink:0;}.sidebar-header.svelte-71f0fw {display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:0.85em;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--background-modifier-border);}.count-pill.svelte-71f0fw {padding:1px 6px;border-radius:10px;background-color:var(--background-modifier-border);font-size:0.85em;}.cluster-list.svelte-71f0fw {flex:1;overflow-y:auto;padding:10px;}.empty-clusters.svelte-71f0fw {text-align:center;padding:30px 16px;color:var(--text-muted);font-size:0.88em;}\n\n  /* Main Workspace */.sg-main-content.svelte-71f0fw {flex:1;display:flex;flex-direction:column;overflow-y:auto;background-color:var(--background-primary);}.empty-selection.svelte-71f0fw {display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);text-align:center;padding:40px;}.empty-icon.svelte-71f0fw {font-size:3em;margin-bottom:12px;}.concept-workspace.svelte-71f0fw {display:flex;flex-direction:column;height:100%;padding:18px 24px;gap:16px;overflow-y:auto;}.concept-header-box.svelte-71f0fw {display:flex;flex-direction:column;gap:12px;}.gatekeeper-banner.svelte-71f0fw {display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:6px;font-size:0.88em;}.gatekeeper-banner.approved.svelte-71f0fw {background-color:rgba(46, 160, 67, 0.15);border:1px solid rgba(46, 160, 67, 0.4);color:var(--text-success, #3fb950);}.gatekeeper-banner.rejected.svelte-71f0fw {background-color:rgba(248, 81, 73, 0.15);border:1px solid rgba(248, 81, 73, 0.4);color:var(--text-error, #f85149);}.gatekeeper-banner.pending.svelte-71f0fw {background-color:var(--background-modifier-border);color:var(--text-muted);}.banner-icon.svelte-71f0fw {font-size:1.2em;font-weight:700;}.concept-title-row.svelte-71f0fw {display:flex;flex-direction:column;gap:6px;}.concept-label.svelte-71f0fw {font-size:0.85em;font-weight:600;color:var(--text-muted);}.concept-title-input.svelte-71f0fw {width:100%;font-size:1.1em;font-weight:600;padding:8px 12px;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-secondary);color:var(--text-normal);}.concept-title-input.svelte-71f0fw:focus {border-color:var(--interactive-accent);outline:none;}.tab-bar.svelte-71f0fw {display:flex;gap:8px;border-bottom:1px solid var(--background-modifier-border);padding-bottom:6px;}.tab-btn.svelte-71f0fw {background:transparent;border:none;color:var(--text-muted);font-size:0.88em;padding:6px 12px;border-radius:4px;cursor:pointer;}.tab-btn.svelte-71f0fw:hover {color:var(--text-normal);}.tab-btn.active.svelte-71f0fw {color:var(--interactive-accent);font-weight:600;border-bottom:2px solid var(--interactive-accent);border-radius:0;}.tab-content.svelte-71f0fw {flex:1;}.modifications-list.svelte-71f0fw {display:flex;flex-direction:column;}.no-mods.svelte-71f0fw {padding:20px;color:var(--text-muted);font-style:italic;}.note-preview-pane.svelte-71f0fw {display:flex;flex-direction:column;gap:8px;}.atomic-note-editor.svelte-71f0fw {width:100%;font-family:var(--font-monospace);font-size:0.9em;line-height:1.5;padding:12px;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-secondary);color:var(--text-normal);resize:vertical;}.concept-footer-actions.svelte-71f0fw {display:flex;align-items:center;padding-top:14px;border-top:1px solid var(--background-modifier-border);margin-top:auto;}.spacer.svelte-71f0fw {flex:1;}"
+  code: ".semantic-gardener-container.svelte-71f0fw {container-type:inline-size;container-name:gardener-root;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}.semantic-gardener-root.svelte-71f0fw {display:flex;flex-direction:column;height:100%;width:100%;background-color:var(--background-primary);color:var(--text-normal);font-family:var(--font-text);overflow:hidden;}\n\n  /* Header */.sg-header.svelte-71f0fw {display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--background-modifier-border);background-color:var(--background-secondary-alt);flex-shrink:0;gap:10px;flex-wrap:wrap;}.sg-header-left.svelte-71f0fw {display:flex;align-items:center;gap:8px;flex-shrink:0;}.sg-logo.svelte-71f0fw {font-size:1.4em;}.sg-title.svelte-71f0fw {margin:0;font-size:1.15em;font-weight:700;}.sg-badge.svelte-71f0fw {font-size:0.75em;padding:2px 8px;border-radius:12px;background-color:var(--background-modifier-border);color:var(--text-muted);}.sg-header-actions.svelte-71f0fw {display:flex;align-items:center;gap:6px;flex-wrap:wrap;}\n\n  /* Dynamic Buttons */.sg-btn.svelte-71f0fw {display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 12px;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-primary);color:var(--text-normal);cursor:pointer;font-size:0.85em;font-weight:500;transition:all 0.15s ease;white-space:nowrap;}.sg-btn.svelte-71f0fw:hover:not(:disabled) {background-color:var(--background-modifier-hover);border-color:var(--interactive-accent);}.sg-btn.svelte-71f0fw:disabled {opacity:0.45;cursor:not-allowed;}.sg-btn-primary.svelte-71f0fw {background-color:var(--interactive-accent);color:var(--text-on-accent);border-color:var(--interactive-accent);}.sg-btn-primary.svelte-71f0fw:hover:not(:disabled) {background-color:var(--interactive-accent-hover);}.sg-btn-danger.svelte-71f0fw {color:var(--text-error, #f85149);border-color:rgba(248, 81, 73, 0.4);}.sg-btn-danger.svelte-71f0fw:hover {background-color:rgba(248, 81, 73, 0.15);}.sg-btn-undo.svelte-71f0fw {border-color:var(--background-modifier-border);}.sg-btn-large.svelte-71f0fw {padding:8px 18px;font-size:0.95em;font-weight:600;}.sg-btn-sm.svelte-71f0fw {padding:4px 8px;font-size:0.8em;}.btn-icon.svelte-71f0fw {font-size:0.95em;}\n\n  /* Body Layout */.sg-body.svelte-71f0fw {display:flex;flex:1;overflow:hidden;}\n\n  /* Left Sidebar */.sg-sidebar.svelte-71f0fw {width:320px;border-right:1px solid var(--background-modifier-border);display:flex;flex-direction:column;background-color:var(--background-secondary);flex-shrink:0;}.sidebar-header.svelte-71f0fw {display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:0.85em;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--background-modifier-border);}.count-pill.svelte-71f0fw {padding:1px 6px;border-radius:10px;background-color:var(--background-modifier-border);font-size:0.85em;}.cluster-list.svelte-71f0fw {flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px;}.empty-clusters.svelte-71f0fw {padding:30px 16px;text-align:center;color:var(--text-muted);font-size:0.88em;}\n\n  /* Main Workspace */.sg-main-content.svelte-71f0fw {flex:1;overflow-y:auto;display:flex;flex-direction:column;background-color:var(--background-primary);}.empty-selection.svelte-71f0fw {display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:var(--text-muted);}.empty-icon.svelte-71f0fw {font-size:3em;margin-bottom:16px;opacity:0.7;}.concept-workspace.svelte-71f0fw {display:flex;flex-direction:column;min-height:100%;padding:16px 20px;gap:16px;}.narrow-nav-row.svelte-71f0fw {display:none;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--background-modifier-border);}.narrow-concept-label.svelte-71f0fw {font-weight:600;font-size:0.9em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-accent);}.concept-header-box.svelte-71f0fw {display:flex;flex-direction:column;gap:12px;}.gatekeeper-banner.svelte-71f0fw {display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:6px;font-size:0.88em;line-height:1.4;}.gatekeeper-banner.approved.svelte-71f0fw {background-color:rgba(46, 160, 67, 0.15);border:1px solid rgba(46, 160, 67, 0.35);color:var(--text-success, #3fb950);}.gatekeeper-banner.rejected.svelte-71f0fw {background-color:rgba(248, 81, 73, 0.15);border:1px solid rgba(248, 81, 73, 0.35);color:var(--text-error, #f85149);}.gatekeeper-banner.pending.svelte-71f0fw {background-color:rgba(210, 153, 34, 0.15);border:1px solid rgba(210, 153, 34, 0.35);color:var(--text-warning, #d29922);}.banner-icon.svelte-71f0fw {font-weight:700;font-size:1.2em;flex-shrink:0;}.concept-title-row.svelte-71f0fw {display:flex;flex-direction:column;gap:6px;}.concept-label.svelte-71f0fw {font-size:0.85em;font-weight:600;color:var(--text-muted);}.concept-title-input.svelte-71f0fw {width:100%;padding:8px 12px;font-size:1.05em;font-weight:600;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-secondary);color:var(--text-normal);}.concept-title-input.svelte-71f0fw:focus {border-color:var(--interactive-accent);outline:none;}.tab-bar.svelte-71f0fw {display:flex;gap:8px;border-bottom:1px solid var(--background-modifier-border);padding-bottom:4px;flex-wrap:wrap;}.tab-btn.svelte-71f0fw {background:transparent;border:none;color:var(--text-muted);font-size:0.88em;padding:6px 12px;border-radius:4px;cursor:pointer;transition:color 0.15s ease;}.tab-btn.svelte-71f0fw:hover {color:var(--text-normal);}.tab-btn.active.svelte-71f0fw {color:var(--interactive-accent);font-weight:600;border-bottom:2px solid var(--interactive-accent);border-radius:0;}.tab-content.svelte-71f0fw {flex:1;}.modifications-list.svelte-71f0fw {display:flex;flex-direction:column;gap:12px;}.no-mods.svelte-71f0fw {padding:20px;color:var(--text-muted);font-style:italic;}.note-preview-pane.svelte-71f0fw {display:flex;flex-direction:column;gap:8px;}.atomic-note-editor.svelte-71f0fw {width:100%;font-family:var(--font-monospace);font-size:0.9em;line-height:1.5;padding:12px;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-secondary);color:var(--text-normal);resize:vertical;}.concept-footer-actions.svelte-71f0fw {display:flex;align-items:center;padding-top:14px;border-top:1px solid var(--background-modifier-border);margin-top:auto;flex-wrap:wrap;gap:10px;}.spacer.svelte-71f0fw {flex:1;}\n\n  /* Container Queries for Adaptive Responsive Layout */\n  @container gardener-root (max-width: 680px) {.sg-header.svelte-71f0fw {flex-direction:column;align-items:stretch;gap:8px;padding:8px 12px;}.sg-header-actions.svelte-71f0fw {display:flex;width:100%;gap:6px;}.sg-header-actions.svelte-71f0fw .sg-btn:where(.svelte-71f0fw) {flex:1 1 auto;padding:6px 8px;font-size:0.82em;}\n\n    /* Stacked View: only show active view mode in narrow mode */.sg-body.view-mode-list.svelte-71f0fw .sg-main-content:where(.svelte-71f0fw) {display:none !important;}.sg-body.view-mode-detail.svelte-71f0fw .sg-sidebar:where(.svelte-71f0fw) {display:none !important;}.sg-body.view-mode-detail.svelte-71f0fw .sg-main-content:where(.svelte-71f0fw) {width:100% !important;}.sg-body.view-mode-list.svelte-71f0fw .sg-sidebar:where(.svelte-71f0fw) {width:100% !important;border-right:none;}.narrow-nav-row.svelte-71f0fw {display:flex !important;}\n  }\n\n  @container gardener-root (max-width: 440px) {.sg-header-actions.svelte-71f0fw .btn-text:where(.svelte-71f0fw) {font-size:0.82em;}.concept-footer-actions.svelte-71f0fw {flex-direction:column-reverse;align-items:stretch;gap:8px;}.concept-footer-actions.svelte-71f0fw .sg-btn:where(.svelte-71f0fw) {width:100%;text-align:center;justify-content:center;}.concept-footer-actions.svelte-71f0fw .spacer:where(.svelte-71f0fw) {display:none;}\n  }"
 };
 function ReviewModal($$anchor, $$props) {
   push($$props, false);
-  append_styles($$anchor, $$css4);
+  append_styles($$anchor, $$css5);
   const selectedCluster = mutable_source();
   const selectedPlan = mutable_source();
   let plugin = prop($$props, "plugin", 8);
   let clusters = prop($$props, "clusters", 24, () => []);
   let plans = prop($$props, "plans", 24, () => ({}));
   let isScanning = prop($$props, "isScanning", 8, false);
-  let scanProgress = prop($$props, "scanProgress", 8, "");
+  let logger = prop($$props, "logger", 8, void 0);
+  let onCancelScan = prop($$props, "onCancelScan", 8, void 0);
   let onScanVault = prop($$props, "onScanVault", 8);
   let onScanActiveNote = prop($$props, "onScanActiveNote", 8);
   let onApplyPlan = prop($$props, "onApplyPlan", 8);
@@ -7183,6 +7609,11 @@ function ReviewModal($$anchor, $$props) {
   let selectedClusterId = mutable_source(null);
   let activeTab = mutable_source("modifications");
   let historyCount = mutable_source(0);
+  let activeViewMode = mutable_source("list");
+  function selectCluster(id) {
+    set(selectedClusterId, id);
+    set(activeViewMode, "detail");
+  }
   function updateHistoryCount() {
     if (plugin()?.transactionManager) {
       set(historyCount, plugin().transactionManager.getHistory().length);
@@ -7213,79 +7644,67 @@ function ReviewModal($$anchor, $$props) {
   });
   legacy_pre_effect_reset();
   init();
-  var div = root_132();
-  var header = child(div);
-  var div_1 = child(header);
-  var span = sibling(child(div_1), 4);
+  var div = root_11();
+  var div_1 = child(div);
+  var header = child(div_1);
+  var div_2 = child(header);
+  var span = sibling(child(div_2), 4);
   var text2 = only_child(span);
-  reset(div_1);
-  var div_2 = sibling(div_1, 2);
-  var node = child(div_2);
-  {
-    var consequent = ($$anchor2) => {
-      var span_1 = root4();
-      var text_1 = sibling(child(span_1));
-      reset(span_1);
-      template_effect(() => set_text(text_1, ` ${(scanProgress() || "\u0412\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u044F \u0438 \u0430\u043D\u0430\u043B\u0438\u0437...") ?? ""}`));
-      append($$anchor2, span_1);
-    };
-    var alternate = ($$anchor2) => {
-      var fragment = root_14();
-      var button = first_child(fragment);
-      var button_1 = sibling(button, 2);
-      event("click", button, function(...$$args) {
-        onScanActiveNote()?.apply(this, $$args);
-      });
-      event("click", button_1, function(...$$args) {
-        onScanVault()?.apply(this, $$args);
-      });
-      append($$anchor2, fragment);
-    };
-    if_block(node, ($$render) => {
-      if (isScanning()) $$render(consequent);
-      else $$render(alternate, -1);
-    });
-  }
-  var button_2 = sibling(node, 2);
-  var text_2 = only_child(button_2);
   reset(div_2);
+  var div_3 = sibling(div_2, 2);
+  var button = child(div_3);
+  var button_1 = sibling(button, 2);
+  var button_2 = sibling(button_1, 2);
+  var span_1 = sibling(child(button_2), 2);
+  var text_1 = only_child(span_1);
+  reset(button_2);
+  reset(div_3);
   reset(header);
-  var div_3 = sibling(header, 2);
-  var aside = child(div_3);
-  var div_4 = child(aside);
-  var span_2 = sibling(child(div_4), 2);
-  var text_3 = only_child(span_2, true);
-  reset(div_4);
-  var div_5 = sibling(div_4, 2);
-  var node_1 = child(div_5);
+  var node = sibling(header, 2);
+  LogPanel(node, {
+    get logger() {
+      return logger();
+    },
+    get onCancelScan() {
+      return onCancelScan();
+    }
+  });
+  var div_4 = sibling(node, 2);
+  var aside = child(div_4);
+  var div_5 = child(aside);
+  var span_2 = sibling(child(div_5), 2);
+  var text_2 = only_child(span_2, true);
+  reset(div_5);
+  var div_6 = sibling(div_5, 2);
+  var node_1 = child(div_6);
   {
-    var consequent_2 = ($$anchor2) => {
-      var div_6 = root_42();
-      var node_2 = child(div_6);
+    var consequent_1 = ($$anchor2) => {
+      var div_7 = root_25();
+      var node_2 = child(div_7);
       {
-        var consequent_1 = ($$anchor3) => {
-          var p = root_24();
+        var consequent = ($$anchor3) => {
+          var p = root5();
           append($$anchor3, p);
         };
-        var alternate_1 = ($$anchor3) => {
-          var fragment_1 = root_34();
-          var button_3 = sibling(first_child(fragment_1), 2);
+        var alternate = ($$anchor3) => {
+          var fragment = root_15();
+          var button_3 = sibling(first_child(fragment), 2);
           event("click", button_3, function(...$$args) {
             onScanVault()?.apply(this, $$args);
           });
-          append($$anchor3, fragment_1);
+          append($$anchor3, fragment);
         };
         if_block(node_2, ($$render) => {
-          if (isScanning()) $$render(consequent_1);
-          else $$render(alternate_1, -1);
+          if (isScanning()) $$render(consequent);
+          else $$render(alternate, -1);
         });
       }
-      reset(div_6);
-      append($$anchor2, div_6);
+      reset(div_7);
+      append($$anchor2, div_7);
     };
-    var alternate_2 = ($$anchor2) => {
-      var fragment_2 = comment();
-      var node_3 = first_child(fragment_2);
+    var alternate_1 = ($$anchor2) => {
+      var fragment_1 = comment();
+      var node_3 = first_child(fragment_1);
       each(node_3, 1, clusters, (cluster) => cluster.id, ($$anchor3, cluster) => {
         {
           let $0 = derived_safe_equal(() => (get(selectedCluster), get(cluster), untrack(() => get(selectedCluster)?.id === get(cluster).id)));
@@ -7299,86 +7718,90 @@ function ReviewModal($$anchor, $$props) {
             get isSelected() {
               return get($0);
             },
-            onSelect: () => {
-              set(selectedClusterId, get(cluster).id);
-            }
+            onSelect: () => selectCluster(get(cluster).id)
           });
         }
       });
-      append($$anchor2, fragment_2);
+      append($$anchor2, fragment_1);
     };
     if_block(node_1, ($$render) => {
-      if (deep_read_state(clusters()), untrack(() => clusters().length === 0)) $$render(consequent_2);
-      else $$render(alternate_2, -1);
+      if (deep_read_state(clusters()), untrack(() => clusters().length === 0)) $$render(consequent_1);
+      else $$render(alternate_1, -1);
     });
   }
-  reset(div_5);
+  reset(div_6);
   reset(aside);
   var main = sibling(aside, 2);
   var node_4 = child(main);
   {
-    var consequent_3 = ($$anchor2) => {
-      var div_7 = root_52();
-      append($$anchor2, div_7);
+    var consequent_2 = ($$anchor2) => {
+      var div_8 = root_35();
+      append($$anchor2, div_8);
     };
-    var alternate_7 = ($$anchor2) => {
-      var div_8 = root_122();
-      var div_9 = child(div_8);
-      var node_5 = child(div_9);
+    var alternate_6 = ($$anchor2) => {
+      var div_9 = root_10();
+      var div_10 = child(div_9);
+      var button_4 = child(div_10);
+      var text_3 = only_child(button_4);
+      var span_3 = sibling(button_4, 2);
+      var text_4 = only_child(span_3, true);
+      reset(div_10);
+      var div_11 = sibling(div_10, 2);
+      var node_5 = child(div_11);
       {
-        var consequent_5 = ($$anchor3) => {
-          var fragment_4 = comment();
-          var node_6 = first_child(fragment_4);
+        var consequent_4 = ($$anchor3) => {
+          var fragment_3 = comment();
+          var node_6 = first_child(fragment_3);
           {
-            var consequent_4 = ($$anchor4) => {
-              var div_10 = root_6();
-              append($$anchor4, div_10);
+            var consequent_3 = ($$anchor4) => {
+              var div_12 = root_43();
+              append($$anchor4, div_12);
             };
-            var alternate_3 = ($$anchor4) => {
-              var div_11 = root_7();
-              var div_12 = sibling(child(div_11), 2);
-              var text_4 = sibling(child(div_12));
-              reset(div_12);
-              reset(div_11);
-              template_effect(() => set_text(text_4, ` ${(get(selectedPlan), untrack(() => get(selectedPlan).rejectionReason || "\u0420\u0430\u0437\u043D\u044B\u0435 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043D\u044B\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u0438\u043B\u0438 \u043C\u0435\u0442\u0430\u0444\u043E\u0440\u044B.")) ?? ""}`));
-              append($$anchor4, div_11);
+            var alternate_2 = ($$anchor4) => {
+              var div_13 = root_53();
+              var div_14 = sibling(child(div_13), 2);
+              var text_5 = sibling(child(div_14));
+              reset(div_14);
+              reset(div_13);
+              template_effect(() => set_text(text_5, ` ${(get(selectedPlan), untrack(() => get(selectedPlan).rejectionReason || "\u0420\u0430\u0437\u043D\u044B\u0435 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043D\u044B\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u0438\u043B\u0438 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442.")) ?? ""}`));
+              append($$anchor4, div_13);
             };
             if_block(node_6, ($$render) => {
-              if (get(selectedPlan), untrack(() => get(selectedPlan).isDuplicate)) $$render(consequent_4);
-              else $$render(alternate_3, -1);
+              if (get(selectedPlan), untrack(() => get(selectedPlan).isDuplicate)) $$render(consequent_3);
+              else $$render(alternate_2, -1);
             });
           }
-          append($$anchor3, fragment_4);
+          append($$anchor3, fragment_3);
         };
-        var alternate_4 = ($$anchor3) => {
-          var div_13 = root_8();
-          append($$anchor3, div_13);
+        var alternate_3 = ($$anchor3) => {
+          var div_15 = root_62();
+          append($$anchor3, div_15);
         };
         if_block(node_5, ($$render) => {
-          if (get(selectedPlan)) $$render(consequent_5);
-          else $$render(alternate_4, -1);
+          if (get(selectedPlan)) $$render(consequent_4);
+          else $$render(alternate_3, -1);
         });
       }
-      var div_14 = sibling(node_5, 2);
-      var input = sibling(child(div_14), 2);
+      var div_16 = sibling(node_5, 2);
+      var input = sibling(child(div_16), 2);
       remove_input_defaults(input);
-      reset(div_14);
-      var div_15 = sibling(div_14, 2);
-      var button_4 = child(div_15);
-      var text_5 = only_child(button_4);
-      var button_5 = sibling(button_4, 2);
-      reset(div_15);
-      reset(div_9);
-      var div_16 = sibling(div_9, 2);
-      var node_7 = child(div_16);
+      reset(div_16);
+      var div_17 = sibling(div_16, 2);
+      var button_5 = child(div_17);
+      var text_6 = only_child(button_5);
+      var button_6 = sibling(button_5, 2);
+      reset(div_17);
+      reset(div_11);
+      var div_18 = sibling(div_11, 2);
+      var node_7 = child(div_18);
       {
-        var consequent_7 = ($$anchor3) => {
-          var div_17 = root_10();
-          var node_8 = child(div_17);
+        var consequent_6 = ($$anchor3) => {
+          var div_19 = root_82();
+          var node_8 = child(div_19);
           {
-            var consequent_6 = ($$anchor4) => {
-              var fragment_5 = comment();
-              var node_9 = first_child(fragment_5);
+            var consequent_5 = ($$anchor4) => {
+              var fragment_4 = comment();
+              var node_9 = first_child(fragment_4);
               each(
                 node_9,
                 1,
@@ -7398,66 +7821,79 @@ function ReviewModal($$anchor, $$props) {
                   }
                 }
               );
-              append($$anchor4, fragment_5);
+              append($$anchor4, fragment_4);
             };
-            var alternate_5 = ($$anchor4) => {
-              var div_18 = root_9();
-              append($$anchor4, div_18);
+            var alternate_4 = ($$anchor4) => {
+              var div_20 = root_72();
+              append($$anchor4, div_20);
             };
             if_block(node_8, ($$render) => {
-              if (get(selectedPlan), untrack(() => get(selectedPlan)?.modifications && get(selectedPlan).modifications.length > 0)) $$render(consequent_6);
-              else $$render(alternate_5, -1);
+              if (get(selectedPlan), untrack(() => get(selectedPlan)?.modifications && get(selectedPlan).modifications.length > 0)) $$render(consequent_5);
+              else $$render(alternate_4, -1);
             });
           }
-          reset(div_17);
-          append($$anchor3, div_17);
-        };
-        var alternate_6 = ($$anchor3) => {
-          var div_19 = root_11();
-          var textarea = sibling(child(div_19), 2);
-          remove_textarea_child(textarea);
           reset(div_19);
-          bind_value(textarea, () => get(selectedPlan).canonicalNoteMarkdown, ($$value) => mutate(selectedPlan, get(selectedPlan).canonicalNoteMarkdown = $$value));
           append($$anchor3, div_19);
         };
+        var alternate_5 = ($$anchor3) => {
+          var div_21 = root_9();
+          var textarea = sibling(child(div_21), 2);
+          remove_textarea_child(textarea);
+          reset(div_21);
+          bind_value(textarea, () => get(selectedPlan).canonicalNoteMarkdown, ($$value) => mutate(selectedPlan, get(selectedPlan).canonicalNoteMarkdown = $$value));
+          append($$anchor3, div_21);
+        };
         if_block(node_7, ($$render) => {
-          if (get(activeTab) === "modifications") $$render(consequent_7);
-          else $$render(alternate_6, -1);
+          if (get(activeTab) === "modifications") $$render(consequent_6);
+          else $$render(alternate_5, -1);
         });
       }
-      reset(div_16);
-      var div_20 = sibling(div_16, 2);
-      var button_6 = child(div_20);
-      var button_7 = sibling(button_6, 4);
-      reset(div_20);
-      reset(div_8);
+      reset(div_18);
+      var div_22 = sibling(div_18, 2);
+      var button_7 = child(div_22);
+      var button_8 = sibling(button_7, 4);
+      reset(div_22);
+      reset(div_9);
       template_effect(() => {
-        set_class(button_4, 1, `tab-btn ${get(activeTab) === "modifications" ? "active" : ""}`, "svelte-71f0fw");
-        set_text(text_5, `\u270F\uFE0F \u0417\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 (${(get(selectedPlan), untrack(() => get(selectedPlan)?.modifications?.length || 0)) ?? ""})`);
-        set_class(button_5, 1, `tab-btn ${get(activeTab) === "notePreview" ? "active" : ""}`, "svelte-71f0fw");
-        button_7.disabled = (get(selectedPlan), untrack(() => !get(selectedPlan) || !get(selectedPlan).isDuplicate));
+        set_text(text_3, `\u2190 \u041A \u0441\u043F\u0438\u0441\u043A\u0443 (${(deep_read_state(clusters()), untrack(() => clusters().length)) ?? ""})`);
+        set_text(text_4, (get(selectedPlan), untrack(() => get(selectedPlan)?.conceptTitle || "\u0414\u0435\u0442\u0430\u043B\u0438 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430")));
+        set_class(button_5, 1, `tab-btn ${get(activeTab) === "modifications" ? "active" : ""}`, "svelte-71f0fw");
+        set_text(text_6, `\u270F\uFE0F \u0417\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 (${(get(selectedPlan), untrack(() => get(selectedPlan)?.modifications?.length || 0)) ?? ""})`);
+        set_class(button_6, 1, `tab-btn ${get(activeTab) === "notePreview" ? "active" : ""}`, "svelte-71f0fw");
+        button_8.disabled = (get(selectedPlan), untrack(() => !get(selectedPlan) || !get(selectedPlan).isDuplicate));
       });
+      event("click", button_4, () => set(activeViewMode, "list"));
       bind_value(input, () => get(selectedPlan).conceptTitle, ($$value) => mutate(selectedPlan, get(selectedPlan).conceptTitle = $$value));
-      event("click", button_4, () => set(activeTab, "modifications"));
-      event("click", button_5, () => set(activeTab, "notePreview"));
-      event("click", button_6, () => onRejectCluster()(get(selectedCluster).id));
-      event("click", button_7, handleApply);
-      append($$anchor2, div_8);
+      event("click", button_5, () => set(activeTab, "modifications"));
+      event("click", button_6, () => set(activeTab, "notePreview"));
+      event("click", button_7, () => onRejectCluster()(get(selectedCluster).id));
+      event("click", button_8, handleApply);
+      append($$anchor2, div_9);
     };
     if_block(node_4, ($$render) => {
-      if (!get(selectedCluster)) $$render(consequent_3);
-      else $$render(alternate_7, -1);
+      if (!get(selectedCluster)) $$render(consequent_2);
+      else $$render(alternate_6, -1);
     });
   }
   reset(main);
-  reset(div_3);
+  reset(div_4);
+  reset(div_1);
   reset(div);
   template_effect(() => {
     set_text(text2, `${(deep_read_state(clusters()), untrack(() => clusters().length)) ?? ""}
-        ${(deep_read_state(clusters()), untrack(() => clusters().length === 1 ? "\u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442" : "\u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432")) ?? ""}`);
-    button_2.disabled = get(historyCount) === 0;
-    set_text(text_2, `\u21A9 \u041E\u0442\u043A\u0430\u0442 (${get(historyCount) ?? ""})`);
-    set_text(text_3, (deep_read_state(clusters()), untrack(() => clusters().length)));
+          ${(deep_read_state(clusters()), untrack(() => clusters().length === 1 ? "\u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442" : "\u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432")) ?? ""}`);
+    button.disabled = isScanning();
+    button_1.disabled = isScanning();
+    button_2.disabled = get(historyCount) === 0 || isScanning();
+    set_text(text_1, `\u041E\u0442\u043A\u0430\u0442 (${get(historyCount) ?? ""})`);
+    set_class(div_4, 1, `sg-body view-mode-${get(activeViewMode) ?? ""}`, "svelte-71f0fw");
+    set_text(text_2, (deep_read_state(clusters()), untrack(() => clusters().length)));
+  });
+  event("click", button, function(...$$args) {
+    onScanActiveNote()?.apply(this, $$args);
+  });
+  event("click", button_1, function(...$$args) {
+    onScanVault()?.apply(this, $$args);
   });
   event("click", button_2, handleUndo);
   append($$anchor, div);
@@ -7466,7 +7902,7 @@ function ReviewModal($$anchor, $$props) {
 
 // src/ui/RefactorView.ts
 var VIEW_TYPE_REFACTOR = "semantic-gardener-review";
-var RefactorView = class extends import_obsidian3.ItemView {
+var RefactorView = class extends import_obsidian2.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -7489,7 +7925,11 @@ var RefactorView = class extends import_obsidian3.ItemView {
       clusters: this.plugin.candidateClusters,
       plans: this.plugin.refactorPlans,
       isScanning: this.plugin.isScanning,
-      scanProgress: this.plugin.scanProgress,
+      logger: this.plugin.logger,
+      onCancelScan: () => {
+        this.plugin.cancelScan();
+        this.updateProps();
+      },
       onScanVault: async () => {
         await this.plugin.scanVault();
         this.updateProps();
@@ -7529,7 +7969,7 @@ var RefactorView = class extends import_obsidian3.ItemView {
       clusters: [...this.plugin.candidateClusters],
       plans: { ...this.plugin.refactorPlans },
       isScanning: this.plugin.isScanning,
-      scanProgress: this.plugin.scanProgress
+      logger: this.plugin.logger
     };
     if (typeof this.component.$set === "function") {
       this.component.$set(newProps);
@@ -7920,7 +8360,29 @@ var VectorStorage = class {
 };
 
 // src/storage/transaction-manager.ts
-var import_obsidian4 = require("obsidian");
+function normalizePath(path) {
+  return path ? path.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\/|\/$/g, "") : "";
+}
+function showNotice(msg) {
+  try {
+    if (typeof globalThis.Notice === "function") {
+      new globalThis.Notice(msg);
+    } else {
+      const obs = globalThis?.require?.("obsidian");
+      if (obs?.Notice) {
+        new obs.Notice(msg);
+      }
+    }
+  } catch {
+  }
+}
+function isTFile(file) {
+  if (!file) return false;
+  if (typeof globalThis.TFile === "function") {
+    return file instanceof globalThis.TFile;
+  }
+  return typeof file.path === "string";
+}
 var TransactionManager = class {
   history = [];
   historyFilePath;
@@ -7931,7 +8393,7 @@ var TransactionManager = class {
     this.app = app;
     this.pluginId = pluginId;
     this.maxHistoryLength = maxHistoryLength;
-    this.historyFilePath = (0, import_obsidian4.normalizePath)(`.obsidian/plugins/${this.pluginId}/history.json`);
+    this.historyFilePath = normalizePath(`.obsidian/plugins/${this.pluginId}/history.json`);
   }
   setMaxHistoryLength(max) {
     this.maxHistoryLength = max;
@@ -7966,7 +8428,7 @@ var TransactionManager = class {
   }
   async saveHistory() {
     try {
-      const dir = (0, import_obsidian4.normalizePath)(`.obsidian/plugins/${this.pluginId}`);
+      const dir = normalizePath(`.obsidian/plugins/${this.pluginId}`);
       const dirExists = await this.app.vault.adapter.exists(dir);
       if (!dirExists) {
         await this.app.vault.adapter.mkdir(dir);
@@ -7982,13 +8444,13 @@ var TransactionManager = class {
     for (const m of activeMutations) {
       if (!m.file) {
         const msg = `File not found for mutation in ${conceptTitle}`;
-        new import_obsidian4.Notice(msg);
+        showNotice(msg);
         return { success: false, error: msg };
       }
       const currentContent = await this.app.vault.read(m.file);
       if (!currentContent.includes(m.originalSpan)) {
         const msg = `\u041E\u0448\u0438\u0431\u043A\u0430 \u0432\u0430\u043B\u0438\u0434\u0430\u0446\u0438\u0438: \u0422\u0435\u043A\u0441\u0442 \u0432 \u0444\u0430\u0439\u043B\u0435 "${m.file.basename}" \u0431\u044B\u043B \u0438\u0437\u043C\u0435\u043D\u0435\u043D. \u041E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u043E\u0442\u043C\u0435\u043D\u0435\u043D\u0430.`;
-        new import_obsidian4.Notice(msg);
+        showNotice(msg);
         return { success: false, error: msg };
       }
       backups.push({
@@ -7996,7 +8458,7 @@ var TransactionManager = class {
         content: currentContent
       });
     }
-    const normalizedPath = (0, import_obsidian4.normalizePath)(newNotePath);
+    const normalizedPath = normalizePath(newNotePath);
     const lastSlash = normalizedPath.lastIndexOf("/");
     if (lastSlash !== -1) {
       const parentFolder = normalizedPath.substring(0, lastSlash);
@@ -8008,14 +8470,14 @@ var TransactionManager = class {
     const existingFile = this.app.vault.getAbstractFileByPath(normalizedPath);
     if (existingFile) {
       const msg = `\u041E\u0448\u0438\u0431\u043A\u0430: \u0417\u0430\u043C\u0435\u0442\u043A\u0430 "${normalizedPath}" \u0443\u0436\u0435 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442. \u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u043E\u0435 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435.`;
-      new import_obsidian4.Notice(msg);
+      showNotice(msg);
       return { success: false, error: msg };
     }
     try {
       await this.app.vault.create(normalizedPath, newNoteContent);
     } catch (err) {
       const msg = `\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0437\u0434\u0430\u0442\u044C \u0437\u0430\u043C\u0435\u0442\u043A\u0443 "${normalizedPath}": ${err.message}`;
-      new import_obsidian4.Notice(msg);
+      showNotice(msg);
       return { success: false, error: msg };
     }
     for (const m of activeMutations) {
@@ -8025,7 +8487,7 @@ var TransactionManager = class {
         });
       } catch (err) {
         const msg = `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0438 \u0444\u0430\u0439\u043B\u0430 "${m.file.path}": ${err.message}`;
-        new import_obsidian4.Notice(msg);
+        showNotice(msg);
       }
     }
     const transaction = {
@@ -8039,19 +8501,19 @@ var TransactionManager = class {
     this.history.push(transaction);
     this.trimHistory();
     await this.saveHistory();
-    new import_obsidian4.Notice(`\u0420\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433 "${conceptTitle}" \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u043F\u0440\u0438\u043C\u0435\u043D\u0435\u043D!`);
+    showNotice(`\u0420\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433 "${conceptTitle}" \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u043F\u0440\u0438\u043C\u0435\u043D\u0435\u043D!`);
     return { success: true, transaction };
   }
   async undoLast() {
     const lastTx = this.history.pop();
     if (!lastTx) {
-      new import_obsidian4.Notice("\u041D\u0435\u0442 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B\u0445 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439 \u0434\u043B\u044F \u043E\u0442\u043A\u0430\u0442\u0430.");
+      showNotice("\u041D\u0435\u0442 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B\u0445 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439 \u0434\u043B\u044F \u043E\u0442\u043A\u0430\u0442\u0430.");
       return false;
     }
     let restoredCount = 0;
     for (const backup of lastTx.backups) {
       const file = this.app.vault.getAbstractFileByPath(backup.path);
-      if (file instanceof import_obsidian4.TFile) {
+      if (isTFile(file)) {
         try {
           await this.app.vault.modify(file, backup.content);
           restoredCount++;
@@ -8061,7 +8523,7 @@ var TransactionManager = class {
       }
     }
     const createdFile = this.app.vault.getAbstractFileByPath(lastTx.createdPath);
-    if (createdFile instanceof import_obsidian4.TFile) {
+    if (isTFile(createdFile)) {
       try {
         await this.app.vault.trash(createdFile, false);
       } catch (e) {
@@ -8069,7 +8531,7 @@ var TransactionManager = class {
       }
     }
     await this.saveHistory();
-    new import_obsidian4.Notice(`\u041E\u0442\u043A\u0430\u0442 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D: \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E ${restoredCount} \u0444\u0430\u0439\u043B\u043E\u0432, \u0437\u0430\u043C\u0435\u0442\u043A\u0430 "${lastTx.conceptTitle}" \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0430 \u0432 \u043A\u043E\u0440\u0437\u0438\u043D\u0443.`);
+    showNotice(`\u041E\u0442\u043A\u0430\u0442 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D: \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E ${restoredCount} \u0444\u0430\u0439\u043B\u043E\u0432, \u0437\u0430\u043C\u0435\u0442\u043A\u0430 "${lastTx.conceptTitle}" \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0430 \u0432 \u043A\u043E\u0440\u0437\u0438\u043D\u0443.`);
     return true;
   }
 };
@@ -8254,64 +8716,133 @@ ${clusterPromptPayload}`;
 };
 
 // src/ai/worker-client.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 var WorkerClient = class {
   worker = null;
   pendingRequests = /* @__PURE__ */ new Map();
   isReady = false;
   readyPromise = null;
   readyResolve = null;
+  readyReject = null;
+  initTimeoutTimer = null;
   app;
   pluginId;
-  constructor(app, pluginId = "obsidian-semantic-gardener") {
+  logger;
+  onModelProgressListener = null;
+  constructor(app, pluginId = "obsidian-semantic-gardener", logger) {
     this.app = app;
     this.pluginId = pluginId;
+    this.logger = logger;
+  }
+  setModelProgressListener(listener) {
+    this.onModelProgressListener = listener;
   }
   async init() {
+    if (this.isReady) return;
     if (this.readyPromise) return this.readyPromise;
+    this.logger?.info("\u0418\u043D\u0438\u0446\u0438\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F \u0444\u043E\u043D\u043E\u0432\u043E\u0433\u043E Web Worker \u0434\u043B\u044F \u0432\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u0438...");
     this.readyPromise = new Promise((resolve, reject) => {
       this.readyResolve = resolve;
-      try {
-        this.spawnWorker();
-      } catch (err) {
-        reject(err);
-      }
+      this.readyReject = reject;
+      this.resetInitTimeout(12e4);
+      this.spawnWorker().catch((err) => {
+        this.failInit(err);
+      });
     });
     return this.readyPromise;
   }
+  resetInitTimeout(timeoutMs = 12e4) {
+    if (this.initTimeoutTimer !== null) {
+      clearTimeout(this.initTimeoutTimer);
+      this.initTimeoutTimer = null;
+    }
+    this.initTimeoutTimer = setTimeout(() => {
+      if (!this.isReady) {
+        const timeoutErr = new Error(
+          `\u0422\u0430\u0439\u043C\u0430\u0443\u0442 \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u044F Web Worker (${Math.round(timeoutMs / 1e3)} \u0441\u0435\u043A \u0431\u0435\u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0438). \u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043C\u043E\u0434\u0435\u043B\u0438 HuggingFace \u0438\u043B\u0438 \u043A\u043E\u043C\u043F\u0438\u043B\u044F\u0446\u0438\u044F WebAssembly \u0437\u0430\u0432\u0438\u0441\u043B\u0430. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0438\u043B\u0438 debug.log.`
+        );
+        this.logger?.error(`\u0422\u0430\u0439\u043C\u0430\u0443\u0442 \u0438\u043D\u0438\u0446\u0438\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u0438 Web Worker (${Math.round(timeoutMs / 1e3)} \u0441\u0435\u043A)`, timeoutErr.stack);
+        this.failInit(timeoutErr);
+      }
+    }, timeoutMs);
+  }
+  failInit(err) {
+    if (this.initTimeoutTimer !== null) {
+      clearTimeout(this.initTimeoutTimer);
+      this.initTimeoutTimer = null;
+    }
+    const reject = this.readyReject;
+    this.readyResolve = null;
+    this.readyReject = null;
+    this.readyPromise = null;
+    this.isReady = false;
+    if (reject) {
+      reject(err);
+    }
+  }
   async spawnWorker() {
     try {
-      const workerFilePath = `.obsidian/plugins/${this.pluginId}/worker.js`;
+      const configDir = this.app?.vault?.configDir || ".obsidian";
+      const workerFilePath = `${configDir}/plugins/${this.pluginId}/worker.js`;
       let workerUrl;
       if (await this.app.vault.adapter.exists(workerFilePath)) {
         const workerCode = await this.app.vault.adapter.read(workerFilePath);
         const blob = new Blob([workerCode], { type: "application/javascript" });
         workerUrl = URL.createObjectURL(blob);
+        this.logger?.info(`Web Worker \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0441\u0447\u0438\u0442\u0430\u043D \u0438\u0437 \u0444\u0430\u0439\u043B\u0430: ${workerFilePath} (${Math.round(workerCode.length / 1024)} KB)`);
       } else {
         workerUrl = "worker.js";
+        this.logger?.warn(`\u0424\u0430\u0439\u043B worker.js \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u043F\u043E \u043F\u0443\u0442\u0438 ${workerFilePath}, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0441\u044F \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 URL.`);
       }
       this.worker = new Worker(workerUrl);
       this.worker.onmessage = (event2) => {
         this.handleWorkerMessage(event2.data);
       };
       this.worker.onerror = (err) => {
+        const msg = typeof err === "string" ? err : err?.message || "Web Worker runtime failure";
+        const details = `Worker crash at ${err?.filename || "worker"}:${err?.lineno || "?"}:${err?.colno || "?"}
+Stack: ${err?.error?.stack || "N/A"}`;
+        this.logger?.error(`Web Worker \u0430\u0432\u0430\u0440\u0438\u0439\u043D\u043E \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u043B\u0441\u044F: ${msg}`, details);
         console.error("Semantic Gardener: Web Worker error:", err);
-        new import_obsidian5.Notice("Semantic Gardener: \u041E\u0448\u0438\u0431\u043A\u0430 Web Worker \u0432\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u0438.");
+        new import_obsidian3.Notice(`Semantic Gardener: \u0421\u0431\u043E\u0439 Web Worker: ${msg}`);
+        if (!this.isReady) {
+          this.failInit(new Error(`Web Worker runtime crash: ${msg}`));
+        }
+        for (const [, req] of this.pendingRequests.entries()) {
+          req.reject(new Error(`Web Worker crashed: ${msg}`));
+        }
+        this.pendingRequests.clear();
       };
       const initMsg = { type: "INIT" };
       this.worker.postMessage(initMsg);
     } catch (err) {
+      const msg = err?.message || String(err);
+      this.logger?.error(`\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C Web Worker: ${msg}`, err?.stack);
       console.error("Semantic Gardener: Failed to spawn Web Worker:", err);
-      new import_obsidian5.Notice(`Semantic Gardener: \u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0444\u043E\u043D\u043E\u0432\u044B\u0439 Web Worker: ${err.message}`);
+      new import_obsidian3.Notice(`Semantic Gardener: \u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0444\u043E\u043D\u043E\u0432\u044B\u0439 Web Worker: ${msg}`);
       throw err;
     }
   }
   handleWorkerMessage(msg) {
     if (msg.type === "READY") {
       this.isReady = true;
+      if (this.initTimeoutTimer !== null) {
+        clearTimeout(this.initTimeoutTimer);
+        this.initTimeoutTimer = null;
+      }
+      this.logger?.info("Web Worker \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0433\u043E\u0442\u043E\u0432 \u043A \u0432\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u0438.");
       if (this.readyResolve) {
         this.readyResolve();
         this.readyResolve = null;
+        this.readyReject = null;
+      }
+      return;
+    }
+    if (msg.type === "MODEL_DOWNLOAD_PROGRESS") {
+      const extraTime = msg.progress >= 100 ? 18e4 : 12e4;
+      this.resetInitTimeout(extraTime);
+      if (this.onModelProgressListener) {
+        this.onModelProgressListener(msg.file, msg.progress);
       }
       return;
     }
@@ -8328,6 +8859,7 @@ var WorkerClient = class {
       return;
     }
     if (msg.type === "ERROR") {
+      this.logger?.error(`Web Worker \u0432\u0435\u0440\u043D\u0443\u043B \u043E\u0448\u0438\u0431\u043A\u0443: ${msg.error}`);
       if (msg.id) {
         const pending2 = this.pendingRequests.get(msg.id);
         if (pending2) {
@@ -8336,22 +8868,44 @@ var WorkerClient = class {
         }
       } else {
         console.error("Semantic Gardener Worker general error:", msg.error);
+        if (!this.isReady) {
+          this.failInit(new Error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u0438\u043D\u0438\u0446\u0438\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u0438 Web Worker: ${msg.error}`));
+        }
       }
     }
   }
   /**
    * Generates embeddings in batches to keep UI responsive and report progress.
    */
-  async embedBatch(items, batchSize = 8, onProgress) {
+  async embedBatch(items, batchSize = 8, onProgress, abortSignal) {
     await this.init();
     const overallResults = /* @__PURE__ */ new Map();
     const total = items.length;
     let completed = 0;
     for (let i = 0; i < items.length; i += batchSize) {
+      if (abortSignal?.aborted) {
+        throw new Error("\u041E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u043E\u0442\u043C\u0435\u043D\u0435\u043D\u0430 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u043C");
+      }
       const slice = items.slice(i, i + batchSize);
       const reqId = `req-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const batchMap = await new Promise((resolve, reject) => {
-        this.pendingRequests.set(reqId, { resolve, reject });
+        const onAbort = () => {
+          this.pendingRequests.delete(reqId);
+          reject(new Error("\u041E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u043E\u0442\u043C\u0435\u043D\u0435\u043D\u0430 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u043C"));
+        };
+        if (abortSignal) {
+          abortSignal.addEventListener("abort", onAbort, { once: true });
+        }
+        this.pendingRequests.set(reqId, {
+          resolve: (val) => {
+            if (abortSignal) abortSignal.removeEventListener("abort", onAbort);
+            resolve(val);
+          },
+          reject: (err) => {
+            if (abortSignal) abortSignal.removeEventListener("abort", onAbort);
+            reject(err);
+          }
+        });
         const msg = {
           type: "EMBED_BATCH",
           id: reqId,
@@ -8370,11 +8924,21 @@ var WorkerClient = class {
     return overallResults;
   }
   terminate() {
+    if (this.initTimeoutTimer !== null) {
+      clearTimeout(this.initTimeoutTimer);
+      this.initTimeoutTimer = null;
+    }
+    for (const [, pending2] of this.pendingRequests.entries()) {
+      pending2.reject(new Error("Web Worker \u0431\u044B\u043B \u043F\u0440\u0438\u043D\u0443\u0434\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D"));
+    }
+    this.pendingRequests.clear();
     if (this.worker) {
       this.worker.terminate();
       this.worker = null;
       this.isReady = false;
       this.readyPromise = null;
+      this.readyResolve = null;
+      this.readyReject = null;
     }
   }
 };
@@ -8675,9 +9239,9 @@ function findClustersForNote(notePath, chunks, threshold = 0.82) {
 }
 
 // src/utils/vault-mutator.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 async function ensureFolderExists(app, folderPath) {
-  const normalized = (0, import_obsidian6.normalizePath)(folderPath).trim();
+  const normalized = (0, import_obsidian4.normalizePath)(folderPath).trim();
   if (!normalized || normalized === "/" || normalized === ".") {
     return;
   }
@@ -8698,9 +9262,9 @@ async function ensureFolderExists(app, folderPath) {
   }
 }
 function getMarkdownFiles(app, excludedFolders = []) {
-  const normalizedExcludes = excludedFolders.map((f) => (0, import_obsidian6.normalizePath)(f.trim())).filter((f) => f.length > 0);
+  const normalizedExcludes = excludedFolders.map((f) => (0, import_obsidian4.normalizePath)(f.trim())).filter((f) => f.length > 0);
   return app.vault.getMarkdownFiles().filter((file) => {
-    const filePath = (0, import_obsidian6.normalizePath)(file.path);
+    const filePath = (0, import_obsidian4.normalizePath)(file.path);
     for (const excluded of normalizedExcludes) {
       if (filePath.startsWith(excluded)) {
         return false;
@@ -8713,13 +9277,316 @@ function sanitizeNoteTitle(title) {
   return title.replace(/[:/\\*?"<>|#^\[\]]/g, "").trim();
 }
 
+// src/core/logger.ts
+var LoggerService = class _LoggerService {
+  static MAX_LOGS = 200;
+  static MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+  // 5 MB rotation cap
+  logs = [];
+  progressState = {
+    phase: "\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435",
+    percentage: 0,
+    message: "\u0413\u043E\u0442\u043E\u0432 \u043A \u0440\u0430\u0431\u043E\u0442\u0435",
+    isScanning: false,
+    canCancel: false
+  };
+  listeners = /* @__PURE__ */ new Set();
+  throttleTimer = null;
+  hasPendingNotification = false;
+  abortController = null;
+  // File Logger integration
+  app = null;
+  pluginId = "obsidian-semantic-gardener";
+  logFilePath = ".obsidian/plugins/obsidian-semantic-gardener/debug.log";
+  writeQueue = [];
+  isWritingToFile = false;
+  fileLoggerInitialized = false;
+  constructor() {
+    this.addLog("info", "Semantic Gardener \u0438\u043D\u0438\u0446\u0438\u0430\u043B\u0438\u0437\u0438\u0440\u043E\u0432\u0430\u043D.");
+  }
+  get abortSignal() {
+    return this.abortController?.signal;
+  }
+  get isCancelled() {
+    return this.abortController?.signal.aborted ?? false;
+  }
+  /**
+   * Start a new cancellable task session
+   */
+  startSession(initialMessage = "\u0417\u0430\u043F\u0443\u0441\u043A \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u0430...") {
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+    this.progressState = {
+      phase: "\u0418\u043D\u0438\u0446\u0438\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F",
+      percentage: 0,
+      message: initialMessage,
+      isScanning: true,
+      canCancel: true,
+      startTime: Date.now()
+    };
+    this.addLog("info", initialMessage);
+    this.flushImmediately();
+    return this.abortController.signal;
+  }
+  /**
+   * Cancel currently running task
+   */
+  cancelSession() {
+    if (this.abortController && !this.abortController.signal.aborted) {
+      this.abortController.abort();
+      this.addLog("warn", "\u041E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u043F\u0440\u0435\u0440\u0432\u0430\u043D\u0430 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u043C.");
+    }
+    this.progressState = {
+      ...this.progressState,
+      phase: "\u041E\u0442\u043C\u0435\u043D\u0435\u043D\u043E",
+      message: "\u041E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0430 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u043C",
+      isScanning: false,
+      canCancel: false
+    };
+    this.flushImmediately();
+  }
+  /**
+   * Mark operation as successfully completed
+   */
+  finishSession(summaryMessage) {
+    this.abortController = null;
+    this.progressState = {
+      ...this.progressState,
+      phase: "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E",
+      percentage: 100,
+      message: summaryMessage,
+      isScanning: false,
+      canCancel: false
+    };
+    this.addLog("success", summaryMessage);
+    this.flushImmediately();
+  }
+  /**
+   * Mark operation as failed with error
+   */
+  failSession(errorMessage) {
+    this.abortController = null;
+    this.progressState = {
+      ...this.progressState,
+      phase: "\u041E\u0448\u0438\u0431\u043A\u0430",
+      message: errorMessage,
+      isScanning: false,
+      canCancel: false
+    };
+    this.addLog("error", errorMessage);
+    this.flushImmediately();
+  }
+  /**
+   * Update current task progress with throttling to protect UI thread
+   */
+  updateProgress(phase, percentage, message) {
+    const clampedPercent = Math.min(100, Math.max(0, Math.round(percentage)));
+    this.progressState = {
+      ...this.progressState,
+      phase,
+      percentage: clampedPercent,
+      message
+    };
+    this.scheduleNotify();
+  }
+  info(message, details) {
+    this.addLog("info", message, details);
+  }
+  success(message, details) {
+    this.addLog("success", message, details);
+  }
+  warn(message, details) {
+    this.addLog("warn", message, details);
+  }
+  error(message, details) {
+    this.addLog("error", message, details);
+    this.flushImmediately();
+  }
+  /**
+   * Initializes the persistent file logger writing to plugin folder debug.log
+   */
+  async initFileLogger(app, pluginId = "obsidian-semantic-gardener") {
+    this.app = app;
+    this.pluginId = pluginId;
+    const configDir = this.app?.vault?.configDir || ".obsidian";
+    this.logFilePath = `${configDir}/plugins/${this.pluginId}/debug.log`;
+    this.fileLoggerInitialized = true;
+    try {
+      if (this.app?.vault?.adapter) {
+        const exists = await this.app.vault.adapter.exists(this.logFilePath);
+        const header = `
+================================================================================
+[${(/* @__PURE__ */ new Date()).toISOString()}] Semantic Gardener Session Initialized
+Target Plugin: ${this.pluginId} | Log: ${this.logFilePath}
+================================================================================
+`;
+        if (!exists) {
+          await this.app.vault.adapter.write(this.logFilePath, header);
+        } else {
+          const stat = await this.app.vault.adapter.stat(this.logFilePath);
+          if (stat && stat.size > _LoggerService.MAX_FILE_SIZE_BYTES) {
+            await this.app.vault.adapter.write(this.logFilePath, `[Log rotated due to 5MB size limit]
+` + header);
+          } else {
+            await this.app.vault.adapter.append(this.logFilePath, header);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Semantic Gardener: Failed to initialize file logger:", err);
+    }
+    this.processFileQueue();
+  }
+  getLogFilePath() {
+    return this.logFilePath;
+  }
+  getAbsolutePath() {
+    if (!this.app?.vault?.adapter) return null;
+    const adapter = this.app.vault.adapter;
+    if (typeof adapter.getBasePath === "function") {
+      const base = adapter.getBasePath().replace(/\\/g, "/").replace(/\/+$/, "");
+      return `${base}/${this.logFilePath}`;
+    }
+    return this.logFilePath;
+  }
+  async openLogFile() {
+    const absPath = this.getAbsolutePath();
+    try {
+      const electron = globalThis?.require?.("electron") || typeof window !== "undefined" && window?.require?.("electron");
+      if (electron?.shell?.openPath && absPath) {
+        const nativeWinPath = absPath.replace(/\//g, "\\");
+        await electron.shell.openPath(nativeWinPath);
+        return;
+      }
+      if (typeof this.app?.openWithDefaultApp === "function") {
+        this.app.openWithDefaultApp(this.logFilePath);
+        return;
+      }
+      if (absPath && typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(absPath.replace(/\//g, "\\"));
+        if (typeof globalThis.Notice === "function") {
+          new globalThis.Notice(`\u041F\u0443\u0442\u044C \u043A \u043B\u043E\u0433\u0443 \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D \u0432 \u0431\u0443\u0444\u0435\u0440: ${absPath}`);
+        }
+      }
+    } catch (err) {
+      console.error("Semantic Gardener: Failed to open log file:", err);
+    }
+  }
+  addLog(level, message, details) {
+    const now = /* @__PURE__ */ new Date();
+    const timestamp = now.toTimeString().split(" ")[0] + "." + String(now.getMilliseconds()).padStart(3, "0");
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      timestamp,
+      level,
+      message,
+      details
+    };
+    this.logs.push(entry);
+    if (this.logs.length > _LoggerService.MAX_LOGS) {
+      this.logs.shift();
+    }
+    const isoTime = now.toISOString();
+    const phaseTag = this.progressState.phase && this.progressState.phase !== "\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435" ? `[${this.progressState.phase} ${this.progressState.percentage}%]` : "";
+    let fileLine = `[${isoTime}] [${level.toUpperCase()}] ${phaseTag} ${message}
+`;
+    if (details) {
+      fileLine += `    Stack / Details: ${details.replace(/\n/g, "\n    ")}
+`;
+    }
+    this.enqueueFileLog(fileLine);
+    this.scheduleNotify();
+  }
+  enqueueFileLog(line) {
+    this.writeQueue.push(line);
+    this.processFileQueue();
+  }
+  async processFileQueue() {
+    if (this.isWritingToFile || this.writeQueue.length === 0 || !this.app?.vault?.adapter || !this.fileLoggerInitialized) {
+      return;
+    }
+    this.isWritingToFile = true;
+    const chunk = this.writeQueue.join("");
+    this.writeQueue = [];
+    try {
+      await this.app.vault.adapter.append(this.logFilePath, chunk);
+    } catch (err) {
+      try {
+        await this.app.vault.adapter.write(this.logFilePath, chunk);
+      } catch (writeErr) {
+        console.warn("Semantic Gardener: Failed to write to debug.log:", writeErr);
+      }
+    } finally {
+      this.isWritingToFile = false;
+      if (this.writeQueue.length > 0) {
+        setTimeout(() => this.processFileQueue(), 40);
+      }
+    }
+  }
+  clearLogs() {
+    this.logs = [];
+    this.flushImmediately();
+  }
+  getState() {
+    return {
+      logs: [...this.logs],
+      progress: { ...this.progressState }
+    };
+  }
+  subscribe(listener) {
+    this.listeners.add(listener);
+    listener(this.getState());
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+  /**
+   * Throttled notification (80-100ms) to prevent Svelte reactivity churn under rapid file loops
+   */
+  scheduleNotify() {
+    this.hasPendingNotification = true;
+    if (this.throttleTimer !== null) return;
+    this.throttleTimer = setTimeout(() => {
+      this.throttleTimer = null;
+      if (this.hasPendingNotification) {
+        this.hasPendingNotification = false;
+        this.emit();
+      }
+    }, 80);
+  }
+  /**
+   * Immediate synchronous flush for important events (start, finish, cancel, error)
+   */
+  flushImmediately() {
+    if (this.throttleTimer !== null) {
+      clearTimeout(this.throttleTimer);
+      this.throttleTimer = null;
+    }
+    this.hasPendingNotification = false;
+    this.emit();
+  }
+  emit() {
+    const state2 = this.getState();
+    for (const listener of this.listeners) {
+      try {
+        listener(state2);
+      } catch (err) {
+        console.error("Semantic Gardener: Logger listener threw an error:", err);
+      }
+    }
+  }
+};
+
 // src/main.ts
-var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
+var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
   settings = DEFAULT_SETTINGS;
   vectorStorage;
   transactionManager;
   geminiClient;
   workerClient;
+  logger = new LoggerService();
   candidateClusters = [];
   refactorPlans = {};
   isScanning = false;
@@ -8730,7 +9597,16 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
     this.transactionManager = new TransactionManager(this.app, this.manifest.id, this.settings.maxHistoryLength);
     await this.transactionManager.init();
     this.geminiClient = new GeminiClient(this.settings.geminiApiKey, this.settings.geminiModel);
-    this.workerClient = new WorkerClient(this.app, this.manifest.id);
+    this.workerClient = new WorkerClient(this.app, this.manifest.id, this.logger);
+    await this.logger.initFileLogger(this.app, this.manifest.id);
+    this.workerClient.setModelProgressListener((file, percent) => {
+      const overall = 15 + Math.round(percent / 100 * 35);
+      if (percent >= 100) {
+        this.logger.updateProgress("\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043C\u043E\u0434\u0435\u043B\u0438", overall, `\u0424\u0430\u0439\u043B ${file} \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043D (100%). \u041A\u043E\u043C\u043F\u0438\u043B\u044F\u0446\u0438\u044F ONNX WebAssembly...`);
+      } else {
+        this.logger.updateProgress("\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043C\u043E\u0434\u0435\u043B\u0438", overall, `\u0421\u043A\u0430\u0447\u0438\u0432\u0430\u043D\u0438\u0435 ${file}: ${percent}%`);
+      }
+    });
     this.registerView(
       VIEW_TYPE_REFACTOR,
       (leaf) => new RefactorView(leaf, this)
@@ -8749,6 +9625,11 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
       callback: () => this.scanActiveNote()
     });
     this.addCommand({
+      id: "cancel-scan",
+      name: "Cancel ongoing semantic scan",
+      callback: () => this.cancelScan()
+    });
+    this.addCommand({
       id: "open-review",
       name: "Open review view",
       callback: () => this.activateView()
@@ -8758,25 +9639,31 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
       name: "Undo last refactor",
       callback: () => this.transactionManager.undoLast()
     });
+    this.addCommand({
+      id: "open-debug-log",
+      name: "Open debug log (debug.log)",
+      callback: () => this.logger.openLogFile()
+    });
     this.addSettingTab(new SemanticGardenerSettingTab(this.app, this));
     this.registerEvent(
       this.app.vault.on("delete", (file) => {
-        if (file instanceof import_obsidian7.TFile) {
+        if (file instanceof import_obsidian5.TFile) {
           this.vectorStorage.deleteFile(file.path);
         }
       })
     );
     this.registerEvent(
       this.app.vault.on("rename", (file, oldPath) => {
-        if (file instanceof import_obsidian7.TFile) {
+        if (file instanceof import_obsidian5.TFile) {
           this.vectorStorage.deleteFile(oldPath);
         }
       })
     );
   }
   onunload() {
-    this.workerClient.terminate();
-    this.vectorStorage.close();
+    this.workerClient?.terminate();
+    this.vectorStorage?.close();
+    this.logger.info("Semantic Gardener \u0432\u044B\u0433\u0440\u0443\u0436\u0435\u043D.");
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -8812,10 +9699,11 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
    */
   async scanVault() {
     if (this.isScanning) {
-      new import_obsidian7.Notice("\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0443\u0436\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F...");
+      new import_obsidian5.Notice("\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0443\u0436\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F...");
       return;
     }
     this.isScanning = true;
+    const signal = this.logger.startSession("\u041F\u043E\u0438\u0441\u043A \u0437\u0430\u043C\u0435\u0442\u043E\u043A \u0432 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435...");
     this.scanProgress = "\u041F\u043E\u0438\u0441\u043A \u0437\u0430\u043C\u0435\u0442\u043E\u043A \u0432 vault...";
     this.notifyViews();
     await this.activateView();
@@ -8823,17 +9711,24 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
       const excluded = this.settings.excludedFolders.split(",").map((s) => s.trim());
       const files = getMarkdownFiles(this.app, excluded);
       if (files.length === 0) {
-        new import_obsidian7.Notice("\u0412 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0437\u0430\u043C\u0435\u0442\u043E\u043A \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430.");
-        this.isScanning = false;
-        this.notifyViews();
+        this.logger.warn("\u0412 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0437\u0430\u043C\u0435\u0442\u043E\u043A \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430.");
+        new import_obsidian5.Notice("\u0412 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0437\u0430\u043C\u0435\u0442\u043E\u043A \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430.");
+        this.logger.finishSession("\u0417\u0430\u043C\u0435\u0442\u043E\u043A \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E");
         return;
       }
-      new import_obsidian7.Notice(`Semantic Gardener: \u041D\u0430\u0447\u0430\u043B\u043E \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F ${files.length} \u0437\u0430\u043C\u0435\u0442\u043E\u043A...`);
+      this.logger.info(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${files.length} \u0437\u0430\u043C\u0435\u0442\u043E\u043A. \u041D\u0430\u0440\u0435\u0437\u043A\u0430 \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043D\u044B\u0445 \u0431\u043B\u043E\u043A\u043E\u0432...`);
+      new import_obsidian5.Notice(`Semantic Gardener: \u041D\u0430\u0447\u0430\u043B\u043E \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F ${files.length} \u0437\u0430\u043C\u0435\u0442\u043E\u043A...`);
       const allChunks = [];
       const chunksNeedingEmbedding = [];
       for (let i = 0; i < files.length; i++) {
+        if (signal.aborted) {
+          this.logger.cancelSession();
+          return;
+        }
         const file = files[i];
+        const phasePct = Math.round((i + 1) / files.length * 15);
         this.scanProgress = `\u041D\u0430\u0440\u0435\u0437\u043A\u0430 AST (${i + 1}/${files.length}): ${file.basename}`;
+        this.logger.updateProgress("\u041D\u0430\u0440\u0435\u0437\u043A\u0430 AST", phasePct, this.scanProgress);
         this.notifyViews();
         const content = await this.app.vault.read(file);
         const fileChunks = await chunkMarkdown(file.path, content, {
@@ -8849,17 +9744,30 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
           allChunks.push(chunk);
         }
       }
+      this.logger.info(`\u041D\u0430\u0440\u0435\u0437\u043A\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0430: ${allChunks.length} \u0431\u043B\u043E\u043A\u043E\u0432. \u0418\u0437 \u043A\u044D\u0448\u0430: ${allChunks.length - chunksNeedingEmbedding.length}, \u043D\u043E\u0432\u044B\u0445: ${chunksNeedingEmbedding.length}.`);
+      if (signal.aborted) {
+        this.logger.cancelSession();
+        return;
+      }
       if (chunksNeedingEmbedding.length > 0) {
         this.scanProgress = `\u0412\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u044F ${chunksNeedingEmbedding.length} \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u043E\u0432...`;
+        this.logger.updateProgress("\u0412\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u044F", 15, this.scanProgress);
         this.notifyViews();
         const embeddingMap = await this.workerClient.embedBatch(
           chunksNeedingEmbedding,
           8,
           (done, total) => {
+            const batchPct = 15 + Math.round(done / total * 55);
             this.scanProgress = `\u0412\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u044F: ${done}/${total} \u0431\u043B\u043E\u043A\u043E\u0432 (${Math.round(done / total * 100)}%)`;
+            this.logger.updateProgress("\u0412\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u044F", batchPct, this.scanProgress);
             this.notifyViews();
-          }
+          },
+          signal
         );
+        if (signal.aborted) {
+          this.logger.cancelSession();
+          return;
+        }
         const toSave = [];
         for (const chunk of allChunks) {
           if (!chunk.embedding && embeddingMap.has(chunk.id)) {
@@ -8869,41 +9777,71 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
         }
         if (toSave.length > 0) {
           await this.vectorStorage.saveChunks(toSave);
+          this.logger.info(`\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043E ${toSave.length} \u043D\u043E\u0432\u044B\u0445 \u044D\u043C\u0431\u0435\u0434\u0434\u0438\u043D\u0433\u043E\u0432 \u0432 IndexedDB.`);
         }
+      } else {
+        this.logger.updateProgress("\u0412\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u044F", 70, "\u0412\u0441\u0435 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u044B \u0443\u0436\u0435 \u0441\u043E\u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F \u0432 \u043A\u044D\u0448\u0435.");
+      }
+      if (signal.aborted) {
+        this.logger.cancelSession();
+        return;
       }
       this.scanProgress = "\u041F\u043E\u0438\u0441\u043A \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0438 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0438\u0437\u0430\u0446\u0438\u044F...";
+      this.logger.updateProgress("\u041A\u043B\u0430\u0441\u0442\u0435\u0440\u0438\u0437\u0430\u0446\u0438\u044F", 75, this.scanProgress);
       this.notifyViews();
       this.candidateClusters = findCandidateClusters(allChunks, this.settings.similarityThreshold);
       if (this.candidateClusters.length === 0) {
-        new import_obsidian7.Notice("\u0421\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0441 \u0437\u0430\u0434\u0430\u043D\u043D\u044B\u043C \u043F\u043E\u0440\u043E\u0433\u043E\u043C \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u0430 \u043D\u0435 \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u043E.");
-        this.isScanning = false;
+        this.logger.finishSession("\u0421\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0441 \u0437\u0430\u0434\u0430\u043D\u043D\u044B\u043C \u043F\u043E\u0440\u043E\u0433\u043E\u043C \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u0430 \u043D\u0435 \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u043E.");
+        new import_obsidian5.Notice("\u0421\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0441 \u0437\u0430\u0434\u0430\u043D\u043D\u044B\u043C \u043F\u043E\u0440\u043E\u0433\u043E\u043C \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u0430 \u043D\u0435 \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u043E.");
         this.scanProgress = "";
-        this.notifyViews();
         return;
       }
-      new import_obsidian7.Notice(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432 \u043D\u0430 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433. \u0417\u0430\u043F\u0443\u0441\u043A LLM Gatekeeper...`);
+      this.logger.success(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432 \u043D\u0430 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433.`);
+      new import_obsidian5.Notice(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432 \u043D\u0430 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433. \u0417\u0430\u043F\u0443\u0441\u043A LLM Gatekeeper...`);
       if (this.settings.geminiApiKey) {
+        this.logger.info("\u0417\u0430\u043F\u0443\u0441\u043A \u0430\u043D\u0430\u043B\u0438\u0437\u0430 LLM Gatekeeper...");
         for (let i = 0; i < this.candidateClusters.length; i++) {
+          if (signal.aborted) {
+            this.logger.cancelSession();
+            return;
+          }
           const cluster = this.candidateClusters[i];
+          const gatekeeperPct = 80 + Math.round((i + 1) / this.candidateClusters.length * 20);
           this.scanProgress = `LLM Gatekeeper (${i + 1}/${this.candidateClusters.length}): \u0410\u043D\u0430\u043B\u0438\u0437 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430...`;
+          this.logger.updateProgress("LLM Gatekeeper", gatekeeperPct, this.scanProgress);
           this.notifyViews();
           try {
             const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
             this.refactorPlans[cluster.id] = plan;
+            if (plan.isDuplicate) {
+              this.logger.success(`\u041A\u043B\u0430\u0441\u0442\u0435\u0440 ${cluster.id.slice(0, 8)} \u043E\u0434\u043E\u0431\u0440\u0435\u043D: \u043A\u043E\u043D\u0446\u0435\u043F\u0442 "${plan.conceptTitle}".`);
+            } else {
+              this.logger.warn(`\u041A\u043B\u0430\u0441\u0442\u0435\u0440 ${cluster.id.slice(0, 8)} \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D: ${plan.rejectionReason || "\u041D\u0435\u0442 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F"}.`);
+            }
           } catch (aiErr) {
             console.error(`AI Analysis error for cluster ${cluster.id}:`, aiErr);
+            this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 AI \u0434\u043B\u044F \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 ${cluster.id.slice(0, 8)}: ${aiErr.message}`);
           }
         }
       } else {
-        new import_obsidian7.Notice("\u0423\u043A\u0430\u0436\u0438\u0442\u0435 Gemini API-\u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445 \u0434\u043B\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0437\u0430\u043C\u0435\u043D.");
+        this.logger.warn("API-\u043A\u043B\u044E\u0447 Gemini \u043D\u0435 \u0437\u0430\u0434\u0430\u043D. \u0410\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F \u0437\u0430\u043C\u0435\u043D \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0430.");
+        new import_obsidian5.Notice("\u0423\u043A\u0430\u0436\u0438\u0442\u0435 Gemini API-\u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445 \u0434\u043B\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0437\u0430\u043C\u0435\u043D.");
       }
       this.scanProgress = "";
-      new import_obsidian7.Notice(`\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E! \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u043E ${this.candidateClusters.length} \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432 \u0434\u043B\u044F \u0440\u0435\u0432\u0438\u0437\u0438\u0438.`);
+      this.logger.finishSession(`\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E! \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u043E ${this.candidateClusters.length} \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432.`);
+      new import_obsidian5.Notice(`\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E! \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u043E ${this.candidateClusters.length} \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432 \u0434\u043B\u044F \u0440\u0435\u0432\u0438\u0437\u0438\u0438.`);
     } catch (err) {
-      console.error("Semantic Gardener scan error:", err);
-      new import_obsidian7.Notice(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0438: ${err.message}`);
+      if (signal.aborted) {
+        this.logger.cancelSession();
+      } else {
+        console.error("Semantic Gardener scan error:", err);
+        const stack2 = err?.stack || String(err);
+        this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0438: ${err?.message || err}`, stack2);
+        new import_obsidian5.Notice(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0438: ${err?.message || err}`);
+      }
     } finally {
       this.isScanning = false;
+      this.scanProgress = "";
       this.notifyViews();
     }
   }
@@ -8913,22 +9851,32 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
   async scanActiveNote() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian7.Notice("\u041D\u0435\u0442 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438.");
+      new import_obsidian5.Notice("\u041D\u0435\u0442 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438.");
+      return;
+    }
+    if (this.isScanning) {
+      new import_obsidian5.Notice("\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0443\u0436\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F...");
       return;
     }
     this.isScanning = true;
+    const signal = this.logger.startSession(`\u0410\u043D\u0430\u043B\u0438\u0437 \u0437\u0430\u043C\u0435\u0442\u043A\u0438: ${activeFile.basename}...`);
     this.scanProgress = `\u0410\u043D\u0430\u043B\u0438\u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438: ${activeFile.basename}...`;
     this.notifyViews();
     await this.activateView();
     try {
+      this.logger.updateProgress("\u0410\u043D\u0430\u043B\u0438\u0437 \u0437\u0430\u043C\u0435\u0442\u043A\u0438", 15, `\u0427\u0442\u0435\u043D\u0438\u0435 ${activeFile.basename}...`);
       const activeContent = await this.app.vault.read(activeFile);
       const activeChunks = await chunkMarkdown(activeFile.path, activeContent, {
         minChunkLength: this.settings.minChunkLength
       });
       if (activeChunks.length === 0) {
-        new import_obsidian7.Notice("\u0412 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0435 \u043D\u0435\u0442 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0449\u0438\u0445 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0445 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u043E\u0432.");
-        this.isScanning = false;
-        this.notifyViews();
+        this.logger.warn("\u0412 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0435 \u043D\u0435\u0442 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0449\u0438\u0445 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0445 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u043E\u0432.");
+        new import_obsidian5.Notice("\u0412 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0435 \u043D\u0435\u0442 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0449\u0438\u0445 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0445 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u043E\u0432.");
+        this.logger.finishSession("\u041D\u0435\u0442 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0449\u0438\u0445 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u043E\u0432");
+        return;
+      }
+      if (signal.aborted) {
+        this.logger.cancelSession();
         return;
       }
       const needingEmbedding = [];
@@ -8941,7 +9889,8 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
         }
       }
       if (needingEmbedding.length > 0) {
-        const map = await this.workerClient.embedBatch(needingEmbedding);
+        this.logger.updateProgress("\u0412\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u044F", 30, `\u0412\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u044F ${needingEmbedding.length} \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u043E\u0432...`);
+        const map = await this.workerClient.embedBatch(needingEmbedding, 8, void 0, signal);
         const toSave = [];
         for (const chunk of activeChunks) {
           if (!chunk.embedding && map.has(chunk.id)) {
@@ -8951,6 +9900,11 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
         }
         await this.vectorStorage.saveChunks(toSave);
       }
+      if (signal.aborted) {
+        this.logger.cancelSession();
+        return;
+      }
+      this.logger.updateProgress("\u041F\u043E\u0438\u0441\u043A \u0441\u0432\u044F\u0437\u0435\u0439", 65, "\u0421\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u0441 \u0431\u0430\u0437\u043E\u0439 \u0437\u043D\u0430\u043D\u0438\u0439...");
       const allIndexed = await this.vectorStorage.getAllChunksWithEmbeddings();
       const combined = [...allIndexed];
       for (const ac of activeChunks) {
@@ -8960,27 +9914,57 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
       }
       this.candidateClusters = findClustersForNote(activeFile.path, combined, this.settings.similarityThreshold);
       if (this.candidateClusters.length === 0) {
-        new import_obsidian7.Notice(`\u0414\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0434\u043B\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0438 "${activeFile.basename}" \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E.`);
+        this.logger.finishSession(`\u0414\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0434\u043B\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0438 "${activeFile.basename}" \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E.`);
+        new import_obsidian5.Notice(`\u0414\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0434\u043B\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0438 "${activeFile.basename}" \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E.`);
       } else {
-        new import_obsidian7.Notice(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439 \u0434\u043B\u044F "${activeFile.basename}".`);
+        this.logger.success(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439.`);
+        new import_obsidian5.Notice(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439 \u0434\u043B\u044F "${activeFile.basename}".`);
         if (this.settings.geminiApiKey) {
-          for (const cluster of this.candidateClusters) {
+          this.logger.info("\u0410\u043D\u0430\u043B\u0438\u0437 \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439 \u0447\u0435\u0440\u0435\u0437 Gemini Gatekeeper...");
+          for (let i = 0; i < this.candidateClusters.length; i++) {
+            if (signal.aborted) {
+              this.logger.cancelSession();
+              return;
+            }
+            const cluster = this.candidateClusters[i];
+            const pct = 75 + Math.round((i + 1) / this.candidateClusters.length * 25);
+            this.logger.updateProgress("LLM Gatekeeper", pct, `\u0410\u043D\u0430\u043B\u0438\u0437 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 ${i + 1}/${this.candidateClusters.length}...`);
             try {
               const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
               this.refactorPlans[cluster.id] = plan;
+              if (plan.isDuplicate) {
+                this.logger.success(`\u041A\u043B\u0430\u0441\u0442\u0435\u0440 \u043E\u0434\u043E\u0431\u0440\u0435\u043D: \u043A\u043E\u043D\u0446\u0435\u043F\u0442 "${plan.conceptTitle}".`);
+              }
             } catch (aiErr) {
               console.error("Active note AI error:", aiErr);
+              this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 AI: ${aiErr.message}`);
             }
           }
         }
+        this.logger.finishSession(`\u0410\u043D\u0430\u043B\u0438\u0437 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u043E ${this.candidateClusters.length} \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432.`);
       }
     } catch (err) {
-      console.error("Active note scan error:", err);
-      new import_obsidian7.Notice(`\u041E\u0448\u0438\u0431\u043A\u0430: ${err.message}`);
+      if (signal.aborted) {
+        this.logger.cancelSession();
+      } else {
+        console.error("Active note scan error:", err);
+        const stack2 = err?.stack || String(err);
+        this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0430\u043D\u0430\u043B\u0438\u0437\u0435 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438: ${err?.message || err}`, stack2);
+        new import_obsidian5.Notice(`\u041E\u0448\u0438\u0431\u043A\u0430: ${err?.message || err}`);
+      }
     } finally {
       this.isScanning = false;
       this.scanProgress = "";
       this.notifyViews();
+    }
+  }
+  cancelScan() {
+    if (this.isScanning) {
+      this.logger.cancelSession();
+      this.isScanning = false;
+      this.scanProgress = "";
+      this.notifyViews();
+      new import_obsidian5.Notice("\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u043C.");
     }
   }
   /**
@@ -8988,11 +9972,11 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
    */
   async applyRefactorPlan(cluster, plan) {
     if (!plan.conceptTitle || plan.conceptTitle.trim().length === 0) {
-      new import_obsidian7.Notice("\u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043A\u0430\u043D\u043E\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438.");
+      new import_obsidian5.Notice("\u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043A\u0430\u043D\u043E\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438.");
       return;
     }
     const safeTitle = sanitizeNoteTitle(plan.conceptTitle);
-    const targetFolder = (0, import_obsidian7.normalizePath)(this.settings.conceptsFolder || "Concepts");
+    const targetFolder = (0, import_obsidian5.normalizePath)(this.settings.conceptsFolder || "Concepts");
     await ensureFolderExists(this.app, targetFolder);
     const newNotePath = `${targetFolder}/${safeTitle}.md`;
     const noteContent = plan.canonicalNoteMarkdown || `# ${safeTitle}
@@ -9001,7 +9985,7 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
     const mutations = [];
     for (const mod of plan.modifications) {
       const file = this.app.vault.getAbstractFileByPath(mod.filePath);
-      if (file instanceof import_obsidian7.TFile) {
+      if (file instanceof import_obsidian5.TFile) {
         const newSpan = mod.selectedMode === "inline" ? mod.suggestedInlineSpan : mod.selectedMode === "transclusion" ? mod.transclusionSpan : mod.originalSpan;
         mutations.push({
           file,
@@ -9027,6 +10011,6 @@ var SemanticGardenerPlugin = class extends import_obsidian7.Plugin {
     this.candidateClusters = this.candidateClusters.filter((c) => c.id !== clusterId);
     delete this.refactorPlans[clusterId];
     this.notifyViews();
-    new import_obsidian7.Notice("\u041A\u043E\u043D\u0446\u0435\u043F\u0442 \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D \u0438 \u0443\u0434\u0430\u043B\u0435\u043D \u0438\u0437 \u043E\u0447\u0435\u0440\u0435\u0434\u0438.");
+    new import_obsidian5.Notice("\u041A\u043E\u043D\u0446\u0435\u043F\u0442 \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D \u0438 \u0443\u0434\u0430\u043B\u0435\u043D \u0438\u0437 \u043E\u0447\u0435\u0440\u0435\u0434\u0438.");
   }
 };

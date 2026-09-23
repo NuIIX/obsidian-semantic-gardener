@@ -1,3 +1,43 @@
+
+/* Headers polyfill for Electron Web Worker */
+if (typeof globalThis.Headers === 'undefined') {
+  globalThis.Headers = class Headers {
+    constructor(init) {
+      this._map = new Map();
+      if (init) {
+        if (init instanceof Headers || init?._map) {
+          const entries = (init._map || init).entries();
+          for (const [k, v] of entries) this.set(k, v);
+        } else if (Array.isArray(init)) {
+          for (const [k, v] of init) this.set(k, v);
+        } else if (typeof init === 'object') {
+          for (const k of Object.keys(init)) this.set(k, init[k]);
+        }
+      }
+    }
+    append(k, v) { this.set(k, (this.get(k) ? this.get(k) + ', ' : '') + v); }
+    delete(k) { this._map.delete(k.toLowerCase()); }
+    get(k) { return this._map.get(k.toLowerCase()) ?? null; }
+    has(k) { return this._map.has(k.toLowerCase()); }
+    set(k, v) { this._map.set(k.toLowerCase(), String(v)); }
+    forEach(cb) { this._map.forEach(cb); }
+    entries() { return this._map.entries(); }
+    keys() { return this._map.keys(); }
+    values() { return this._map.values(); }
+    [Symbol.iterator]() { return this._map.entries(); }
+  };
+}
+if (typeof self !== 'undefined' && typeof self.Headers === 'undefined') {
+  self.Headers = globalThis.Headers;
+}
+if (typeof process !== 'undefined') {
+  try {
+    if (process.versions) {
+      delete process.versions.node;
+    }
+  } catch (e) {}
+}
+
 "use strict";
 (() => {
   var __create = Object.create;
@@ -9,10 +49,6 @@
   var __commonJS = (cb, mod2) => function __require() {
     return mod2 || (0, cb[__getOwnPropNames(cb)[0]])((mod2 = { exports: {} }).exports, mod2), mod2.exports;
   };
-  var __export = (target, all) => {
-    for (var name2 in all)
-      __defProp(target, name2, { get: all[name2], enumerable: true });
-  };
   var __copyProps = (to, from, except, desc) => {
     if (from && typeof from === "object" || typeof from === "function") {
       for (let key of __getOwnPropNames(from))
@@ -21,12 +57,12 @@
     }
     return to;
   };
-  var __toESM = (mod2, isNodeMode, target) => (target = mod2 != null ? __create(__getProtoOf(mod2)) : {}, __copyProps(
+  var __toESM = (mod2, isNodeMode, target2) => (target2 = mod2 != null ? __create(__getProtoOf(mod2)) : {}, __copyProps(
     // If the importer is in node compatibility mode or this is not an ESM
     // file that has been converted to a CommonJS file using a Babel-
     // compatible transform (i.e. "__esModule" has not been set), then set
     // "default" to the CommonJS "module.exports" for node compatibility.
-    isNodeMode || !mod2 || !mod2.__esModule ? __defProp(target, "default", { value: mod2, enumerable: true }) : target,
+    isNodeMode || !mod2 || !mod2.__esModule ? __defProp(target2, "default", { value: mod2, enumerable: true }) : target2,
     mod2
   ));
 
@@ -364,7 +400,7 @@
             });
             var l, p, f, d, h, g, b = Object.assign({}, s), m = "./this.program", y = (t3, e3) => {
               throw e3;
-            }, _ = "object" == typeof window, v = "function" == typeof importScripts, w = "object" == typeof process && "object" == typeof process.versions && "string" == typeof process.versions.node, x = s.ENVIRONMENT_IS_PTHREAD || false, T = "";
+            }, _ = "object" == typeof window, v = "function" == typeof importScripts, w = "object" == typeof process && "object" == typeof process.versions && false, x = s.ENVIRONMENT_IS_PTHREAD || false, T = "";
             function S(t3) {
               return s.locateFile ? s.locateFile(t3, T) : T + t3;
             }
@@ -1539,7 +1575,7 @@
             });
             var o, a, s, u, c, l, p = Object.assign({}, e2), f = "./this.program", d = (t3, e3) => {
               throw e3;
-            }, h = "object" == typeof window, g = "function" == typeof importScripts, b = "object" == typeof process && "object" == typeof process.versions && "string" == typeof process.versions.node, m = "";
+            }, h = "object" == typeof window, g = "function" == typeof importScripts, b = "object" == typeof process && "object" == typeof process.versions && false, m = "";
             b ? (m = g ? n(908).dirname(m) + "/" : "//", l = () => {
               c || (u = n(1384), c = n(908));
             }, o = function(t3, e3) {
@@ -13361,48 +13397,6 @@ ${t2}`);
     }
   });
 
-  // node_modules/obsidian/index.js
-  var require_obsidian = __commonJS({
-    "node_modules/obsidian/index.js"(exports2, module2) {
-      var Notice = class {
-        constructor(message, duration) {
-          this.message = message;
-          this.duration = duration;
-        }
-      };
-      var TFile2 = class {
-        constructor(path = "") {
-          this.path = path;
-          this.basename = path.split("/").pop()?.replace(".md", "") || "";
-        }
-      };
-      var TFolder = class {
-      };
-      var Plugin = class {
-      };
-      var PluginSettingTab = class {
-      };
-      var Setting = class {
-      };
-      var ItemView = class {
-      };
-      function normalizePath(path) {
-        if (!path) return "";
-        return path.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\.\//, "");
-      }
-      module2.exports = {
-        Notice,
-        TFile: TFile2,
-        TFolder,
-        Plugin,
-        PluginSettingTab,
-        Setting,
-        ItemView,
-        normalizePath
-      };
-    }
-  });
-
   // node_modules/@xenova/transformers/src/utils/core.js
   function dispatchCallback(progress_callback, data) {
     if (progress_callback) progress_callback(data);
@@ -13477,18 +13471,96 @@ ${t2}`);
   }
 
   // src/utils/empty-shim.ts
-  var empty_shim_exports = {};
-  __export(empty_shim_exports, {
-    default: () => empty_shim_default,
-    existsSync: () => existsSync,
-    promises: () => promises,
-    readFileSync: () => readFileSync
+  var target = {};
+  var emptyProxy = new Proxy(target, {
+    get(_t, prop) {
+      if (prop === "promises") return emptyProxy;
+      if (prop === "default") return emptyProxy;
+      if (prop === "__esModule") return true;
+      return () => {
+      };
+    },
+    ownKeys() {
+      return [];
+    },
+    getOwnPropertyDescriptor() {
+      return void 0;
+    }
   });
-  var empty_shim_default = {};
-  var promises = {};
-  var readFileSync = () => {
+  var empty_shim_default = emptyProxy;
+
+  // src/utils/path-shim.ts
+  function dirname(pathStr) {
+    if (!pathStr || typeof pathStr !== "string") return ".";
+    const normalized = pathStr.replace(/\\/g, "/").replace(/\/+$/, "");
+    const lastSlash = normalized.lastIndexOf("/");
+    if (lastSlash === -1) return ".";
+    if (lastSlash === 0) return "/";
+    return normalized.slice(0, lastSlash);
+  }
+  function basename(pathStr, ext) {
+    if (!pathStr || typeof pathStr !== "string") return "";
+    const normalized = pathStr.replace(/\\/g, "/").replace(/\/+$/, "");
+    const lastSlash = normalized.lastIndexOf("/");
+    let base = lastSlash === -1 ? normalized : normalized.slice(lastSlash + 1);
+    if (ext && base.endsWith(ext)) {
+      base = base.slice(0, -ext.length);
+    }
+    return base;
+  }
+  function extname(pathStr) {
+    if (!pathStr || typeof pathStr !== "string") return "";
+    const base = basename(pathStr);
+    const dotIndex = base.lastIndexOf(".");
+    if (dotIndex <= 0) return "";
+    return base.slice(dotIndex);
+  }
+  function normalize(pathStr) {
+    if (!pathStr || typeof pathStr !== "string") return "";
+    const isAbs = pathStr.startsWith("/") || pathStr.startsWith("\\");
+    const segments = pathStr.replace(/\\/g, "/").split("/");
+    const stack2 = [];
+    for (const seg of segments) {
+      if (!seg || seg === ".") continue;
+      if (seg === "..") {
+        if (stack2.length > 0 && stack2[stack2.length - 1] !== "..") {
+          stack2.pop();
+        } else if (!isAbs) {
+          stack2.push("..");
+        }
+      } else {
+        stack2.push(seg);
+      }
+    }
+    const result = stack2.join("/");
+    return isAbs ? "/" + result : result || ".";
+  }
+  function join(...segments) {
+    const valid = segments.filter((s) => typeof s === "string" && s.length > 0);
+    if (valid.length === 0) return ".";
+    return normalize(valid.join("/"));
+  }
+  function resolve(...segments) {
+    return join(...segments);
+  }
+  function isAbsolute(pathStr) {
+    if (!pathStr || typeof pathStr !== "string") return false;
+    return pathStr.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(pathStr);
+  }
+  var sep = "/";
+  var delimiter = ":";
+  var pathShim = {
+    dirname,
+    basename,
+    extname,
+    join,
+    resolve,
+    normalize,
+    isAbsolute,
+    sep,
+    delimiter
   };
-  var existsSync = () => false;
+  var path_shim_default = pathShim;
 
   // node_modules/@xenova/transformers/src/backends/onnx.js
   var ONNX_WEB = __toESM(require_ort_web_min(), 1);
@@ -13497,7 +13569,7 @@ ${t2}`);
     // 'webgpu',
     "wasm"
   ];
-  if (typeof process !== "undefined" && process?.release?.name === "node") {
+  if (typeof process !== "undefined" && false) {
     ONNX = empty_shim_default ?? empty_shim_exports;
     executionProviders.unshift("cpu");
   } else {
@@ -13514,14 +13586,14 @@ ${t2}`);
   var VERSION = "2.17.2";
   var WEB_CACHE_AVAILABLE = typeof self !== "undefined" && "caches" in self;
   var FS_AVAILABLE = !isEmpty(empty_shim_default);
-  var PATH_AVAILABLE = !isEmpty(empty_shim_default);
+  var PATH_AVAILABLE = !isEmpty(path_shim_default);
   var RUNNING_LOCALLY = FS_AVAILABLE && PATH_AVAILABLE;
-  var __dirname = RUNNING_LOCALLY ? empty_shim_default.dirname(empty_shim_default.dirname(empty_shim_default.fileURLToPath(import_meta.url))) : "./";
-  var DEFAULT_CACHE_DIR = RUNNING_LOCALLY ? empty_shim_default.join(__dirname, "/.cache/") : null;
+  var __dirname = RUNNING_LOCALLY ? path_shim_default.dirname(path_shim_default.dirname(empty_shim_default.fileURLToPath(import_meta.url))) : "./";
+  var DEFAULT_CACHE_DIR = RUNNING_LOCALLY ? path_shim_default.join(__dirname, "/.cache/") : null;
   var DEFAULT_LOCAL_MODEL_PATH = "/models/";
-  var localModelPath = RUNNING_LOCALLY ? empty_shim_default.join(__dirname, DEFAULT_LOCAL_MODEL_PATH) : DEFAULT_LOCAL_MODEL_PATH;
+  var localModelPath = RUNNING_LOCALLY ? path_shim_default.join(__dirname, DEFAULT_LOCAL_MODEL_PATH) : DEFAULT_LOCAL_MODEL_PATH;
   if (onnx_env?.wasm) {
-    onnx_env.wasm.wasmPaths = RUNNING_LOCALLY ? empty_shim_default.join(__dirname, "/dist/") : `https://cdn.jsdelivr.net/npm/@xenova/transformers@${VERSION}/dist/`;
+    onnx_env.wasm.wasmPaths = RUNNING_LOCALLY ? path_shim_default.join(__dirname, "/dist/") : `https://cdn.jsdelivr.net/npm/@xenova/transformers@${VERSION}/dist/`;
   }
   var env = {
     /////////////////// Backends settings ///////////////////
@@ -13677,7 +13749,7 @@ ${t2}`);
   async function getFile(urlOrPath) {
     if (env.useFS && !isValidUrl(urlOrPath, ["http:", "https:", "blob:"])) {
       return new FileResponse(urlOrPath);
-    } else if (typeof process !== "undefined" && process?.release?.name === "node") {
+    } else if (typeof process !== "undefined" && false) {
       const IS_CI = !!process.env?.TESTING_REMOTELY;
       const version = env.version;
       const headers = new Headers();
@@ -13728,7 +13800,7 @@ ${t2}`);
      * @returns {Promise<FileResponse | undefined>}
      */
     async match(request) {
-      let filePath = empty_shim_default.join(this.path, request);
+      let filePath = path_shim_default.join(this.path, request);
       let file = new FileResponse(filePath);
       if (file.exists) {
         return file;
@@ -13744,9 +13816,9 @@ ${t2}`);
      */
     async put(request, response) {
       const buffer = Buffer.from(await response.arrayBuffer());
-      let outputPath = empty_shim_default.join(this.path, request);
+      let outputPath = path_shim_default.join(this.path, request);
       try {
-        await empty_shim_default.promises.mkdir(empty_shim_default.dirname(outputPath), { recursive: true });
+        await empty_shim_default.promises.mkdir(path_shim_default.dirname(outputPath), { recursive: true });
         await empty_shim_default.promises.writeFile(outputPath, buffer);
       } catch (err) {
         console.warn("An error occurred while writing the file to cache:", err);
@@ -21531,14 +21603,14 @@ ${t2}`);
     * @todo Use https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/FinalizationRegistry
     */
     async dispose() {
-      const promises2 = [];
+      const promises = [];
       for (let key of Object.keys(this)) {
         const item = this[key];
         if (item instanceof InferenceSession) {
-          promises2.push(item.handler.dispose());
+          promises.push(item.handler.dispose());
         }
       }
-      return await Promise.all(promises2);
+      return await Promise.all(promises);
     }
     /**
      * Instantiate one of the model classes of the library from a pretrained model.
@@ -27817,7 +27889,7 @@ ${t2}`);
         /** @type {'none'} */
         "none"
       ),
-      normalize = false,
+      normalize: normalize2 = false,
       quantize = false,
       precision = (
         /** @type {'binary'} */
@@ -27838,7 +27910,7 @@ ${t2}`);
       } else {
         throw Error(`Pooling method '${pooling}' not supported.`);
       }
-      if (normalize) {
+      if (normalize2) {
         result = result.normalize(2, -1);
       }
       if (quantize) {
@@ -28875,20 +28947,20 @@ ${t2}`);
   }
   async function loadItems(mapping, model, pretrainedOptions) {
     const result = /* @__PURE__ */ Object.create(null);
-    const promises2 = [];
+    const promises = [];
     for (let [name2, cls] of mapping.entries()) {
       if (!cls) continue;
       let promise;
       if (Array.isArray(cls)) {
-        promise = new Promise(async (resolve, reject) => {
+        promise = new Promise(async (resolve2, reject) => {
           let e;
           for (let c of cls) {
             if (c === null) {
-              resolve(null);
+              resolve2(null);
               return;
             }
             try {
-              resolve(await c.from_pretrained(model, pretrainedOptions));
+              resolve2(await c.from_pretrained(model, pretrainedOptions));
               return;
             } catch (err) {
               e = err;
@@ -28900,21 +28972,79 @@ ${t2}`);
         promise = cls.from_pretrained(model, pretrainedOptions);
       }
       result[name2] = promise;
-      promises2.push(promise);
+      promises.push(promise);
     }
-    await Promise.all(promises2);
+    await Promise.all(promises);
     for (let [name2, promise] of Object.entries(result)) {
       result[name2] = await promise;
     }
     return result;
   }
 
-  // src/types/index.ts
-  var import_obsidian = __toESM(require_obsidian());
-
   // src/ai/worker/embedding.worker.ts
+  if (typeof globalThis.Headers === "undefined") {
+    globalThis.Headers = class Headers2 {
+      map = /* @__PURE__ */ new Map();
+      constructor(init) {
+        if (init) {
+          if (init instanceof Headers2 || init?.map) {
+            for (const [k, v] of (init.map || init).entries()) this.set(k, v);
+          } else if (Array.isArray(init)) {
+            for (const [k, v] of init) this.set(k, v);
+          } else if (typeof init === "object") {
+            for (const k of Object.keys(init)) this.set(k, init[k]);
+          }
+        }
+      }
+      append(name2, value) {
+        this.map.set(name2.toLowerCase(), value);
+      }
+      delete(name2) {
+        this.map.delete(name2.toLowerCase());
+      }
+      get(name2) {
+        return this.map.get(name2.toLowerCase()) ?? null;
+      }
+      has(name2) {
+        return this.map.has(name2.toLowerCase());
+      }
+      set(name2, value) {
+        this.map.set(name2.toLowerCase(), value);
+      }
+      forEach(callback) {
+        this.map.forEach(callback);
+      }
+      entries() {
+        return this.map.entries();
+      }
+      keys() {
+        return this.map.keys();
+      }
+      values() {
+        return this.map.values();
+      }
+      [Symbol.iterator]() {
+        return this.map.entries();
+      }
+    };
+  }
+  self.onerror = (e) => {
+    const errMsg = typeof e === "string" ? e : e?.message ? `${e.message} at ${e.filename || "worker"}:${e.lineno || "?"}:${e.colno || "?"}` : "Worker runtime error";
+    self.postMessage({ type: "ERROR", error: errMsg });
+  };
+  self.onunhandledrejection = (e) => {
+    const reason = e?.reason;
+    const errMsg = reason?.stack || reason?.message || String(reason || "Unhandled rejection in worker");
+    self.postMessage({ type: "ERROR", error: errMsg });
+  };
   env.allowLocalModels = false;
   env.useBrowserCache = true;
+  env.useFS = false;
+  env.useFSCache = false;
+  if (env?.backends?.onnx?.wasm) {
+    env.backends.onnx.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/";
+    env.backends.onnx.wasm.numThreads = 1;
+  }
   var MODEL_NAME = "Xenova/paraphrase-multilingual-MiniLM-L12-v2";
   var extractor = null;
   var isInitializing = false;
@@ -28932,7 +29062,29 @@ ${t2}`);
     isInitializing = true;
     try {
       extractor = await pipeline("feature-extraction", MODEL_NAME, {
-        quantized: true
+        quantized: true,
+        progress_callback: (data) => {
+          if (data?.status === "progress") {
+            const progressMsg = {
+              type: "MODEL_DOWNLOAD_PROGRESS",
+              file: data.file || "model",
+              progress: Math.round(data.progress || 0)
+            };
+            self.postMessage(progressMsg);
+          } else if (data?.status === "done" || data?.status === "ready") {
+            const progressMsg = {
+              type: "MODEL_DOWNLOAD_PROGRESS",
+              file: data.file || "model",
+              progress: 100
+            };
+            self.postMessage(progressMsg);
+          }
+        }
+      });
+      self.postMessage({
+        type: "MODEL_DOWNLOAD_PROGRESS",
+        file: "ONNX WebAssembly \u0441\u043A\u043E\u043C\u043F\u0438\u043B\u0438\u0440\u043E\u0432\u0430\u043D",
+        progress: 100
       });
       isInitializing = false;
       return extractor;
@@ -28950,7 +29102,10 @@ ${t2}`);
         const readyMsg = { type: "READY" };
         self.postMessage(readyMsg);
       } catch (err) {
-        const errMsg = { type: "ERROR", error: err.message };
+        const errMsg = {
+          type: "ERROR",
+          error: `[Embedding Worker Init Error] ${err?.stack || err?.message || String(err)}`
+        };
         self.postMessage(errMsg);
       }
       return;
