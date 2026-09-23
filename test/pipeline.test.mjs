@@ -184,3 +184,48 @@ test('llm-schema: satisfies required Gemini Structured Output contract', () => {
   assert.ok(refactorEngineSchema.properties.modifications);
   assert.ok(refactorEngineSchema.required.includes('isDuplicate'));
 });
+
+test('LoggerService: records progress and writes formatted logs with stack traces to adapter', async () => {
+  const written = [];
+  const mockAdapter = {
+    exists: async () => true,
+    write: async (path, data) => { written.push({ op: 'write', path, data }); },
+    append: async (path, data) => { written.push({ op: 'append', path, data }); },
+    stat: async () => ({ size: 100 })
+  };
+  const mockApp = {
+    vault: {
+      adapter: mockAdapter,
+      configDir: '.obsidian'
+    }
+  };
+
+  const { LoggerService } = await import('../src/core/logger.ts');
+  const logger = new LoggerService();
+  await logger.initFileLogger(mockApp, 'obsidian-semantic-gardener');
+
+  logger.startSession('Анализ заметки');
+  logger.updateProgress('Векторизация', 30, 'Векторизация 1 фрагментов');
+  logger.error('Сбой операции', 'Error: Stack trace at line 42\n    at func()');
+
+  // Allow queue flush
+  await new Promise(r => setTimeout(r, 100));
+
+  const allWritten = written.map(w => w.data).join('\n');
+  assert.ok(allWritten.includes('Semantic Gardener Session Initialized'));
+  assert.ok(allWritten.includes('[ERROR] [Векторизация 30%] Сбой операции'));
+  assert.ok(allWritten.includes('Stack / Details: Error: Stack trace at line 42'));
+});
+
+test('pathShim: correctly emulates POSIX dirname, basename, join and normalize', async () => {
+  const pathShim = (await import('../src/utils/path-shim.ts')).default;
+
+  assert.strictEqual(pathShim.dirname('/a/b/c.wasm'), '/a/b');
+  assert.strictEqual(pathShim.dirname('c.wasm'), '.');
+  assert.strictEqual(pathShim.dirname('/c.wasm'), '/');
+  assert.strictEqual(pathShim.basename('/a/b/c.wasm'), 'c.wasm');
+  assert.strictEqual(pathShim.basename('/a/b/c.wasm', '.wasm'), 'c');
+  assert.strictEqual(pathShim.extname('/a/b/c.wasm'), '.wasm');
+  assert.strictEqual(pathShim.join('/a', 'b', 'c.wasm'), '/a/b/c.wasm');
+  assert.strictEqual(pathShim.normalize('/a/b/../c/./d.wasm'), '/a/c/d.wasm');
+});
