@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import { TransactionManager } from '../src/storage/transaction-manager.ts';
-import { TFile } from 'obsidian';
+
+class TFile {
+  constructor(path) {
+    this.path = path;
+    this.basename = path.split('/').pop().replace(/\.md$/, '');
+  }
+}
 
 // Mock Obsidian App and Vault
 function createMockApp() {

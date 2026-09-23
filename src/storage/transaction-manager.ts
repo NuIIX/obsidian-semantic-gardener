@@ -1,6 +1,32 @@
-import type { App } from 'obsidian';
-import { Notice, normalizePath, TFile } from 'obsidian';
+import type { App, TFile } from 'obsidian';
 import type { Transaction, FileBackup, ModificationMode } from '../types/index.ts';
+
+function normalizePath(path: string): string {
+  return path ? path.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/|\/$/g, '') : '';
+}
+
+function showNotice(msg: string): void {
+  try {
+    if (typeof (globalThis as any).Notice === 'function') {
+      new (globalThis as any).Notice(msg);
+    } else {
+      const obs = (globalThis as any)?.require?.('obsidian');
+      if (obs?.Notice) {
+        new obs.Notice(msg);
+      }
+    }
+  } catch {
+    // Silent in testing environment
+  }
+}
+
+function isTFile(file: any): boolean {
+  if (!file) return false;
+  if (typeof (globalThis as any).TFile === 'function') {
+    return file instanceof (globalThis as any).TFile;
+  }
+  return typeof file.path === 'string';
+}
 
 export interface MutationRequest {
   file: TFile;
@@ -95,14 +121,14 @@ export class TransactionManager {
     for (const m of activeMutations) {
       if (!m.file) {
         const msg = `File not found for mutation in ${conceptTitle}`;
-        new Notice(msg);
+        showNotice(msg);
         return { success: false, error: msg };
       }
 
       const currentContent = await this.app.vault.read(m.file);
       if (!currentContent.includes(m.originalSpan)) {
         const msg = `Ошибка валидации: Текст в файле "${m.file.basename}" был изменен. Операция отменена.`;
-        new Notice(msg);
+        showNotice(msg);
         return { success: false, error: msg };
       }
 
@@ -127,7 +153,7 @@ export class TransactionManager {
     const existingFile = this.app.vault.getAbstractFileByPath(normalizedPath);
     if (existingFile) {
       const msg = `Ошибка: Заметка "${normalizedPath}" уже существует. Выберите другое название.`;
-      new Notice(msg);
+      showNotice(msg);
       return { success: false, error: msg };
     }
 
@@ -135,7 +161,7 @@ export class TransactionManager {
       await this.app.vault.create(normalizedPath, newNoteContent);
     } catch (err: any) {
       const msg = `Не удалось создать заметку "${normalizedPath}": ${err.message}`;
-      new Notice(msg);
+      showNotice(msg);
       return { success: false, error: msg };
     }
 
@@ -147,7 +173,7 @@ export class TransactionManager {
         });
       } catch (err: any) {
         const msg = `Ошибка при изменении файла "${m.file.path}": ${err.message}`;
-        new Notice(msg);
+        showNotice(msg);
         // Note: in a catastrophic mid-way error, user can still run Undo
       }
     }
@@ -166,14 +192,14 @@ export class TransactionManager {
     this.trimHistory();
     await this.saveHistory();
 
-    new Notice(`Рефакторинг "${conceptTitle}" успешно применен!`);
+    showNotice(`Рефакторинг "${conceptTitle}" успешно применен!`);
     return { success: true, transaction };
   }
 
   async undoLast(): Promise<boolean> {
     const lastTx = this.history.pop();
     if (!lastTx) {
-      new Notice('Нет доступных действий для отката.');
+      showNotice('Нет доступных действий для отката.');
       return false;
     }
 
@@ -182,7 +208,7 @@ export class TransactionManager {
     // 1. Restore modified files from snapshot
     for (const backup of lastTx.backups) {
       const file = this.app.vault.getAbstractFileByPath(backup.path);
-      if (file instanceof TFile) {
+      if (isTFile(file)) {
         try {
           await this.app.vault.modify(file, backup.content);
           restoredCount++;
@@ -194,7 +220,7 @@ export class TransactionManager {
 
     // 2. Trash the created atomic note
     const createdFile = this.app.vault.getAbstractFileByPath(lastTx.createdPath);
-    if (createdFile instanceof TFile) {
+    if (isTFile(createdFile)) {
       try {
         await this.app.vault.trash(createdFile, false);
       } catch (e) {
@@ -203,7 +229,7 @@ export class TransactionManager {
     }
 
     await this.saveHistory();
-    new Notice(`Откат выполнен: восстановлено ${restoredCount} файлов, заметка "${lastTx.conceptTitle}" отправлена в корзину.`);
+    showNotice(`Откат выполнен: восстановлено ${restoredCount} файлов, заметка "${lastTx.conceptTitle}" отправлена в корзину.`);
     return true;
   }
 }
