@@ -34,7 +34,11 @@ export class RefactorView extends ItemView {
       clusters: this.plugin.candidateClusters,
       plans: this.plugin.refactorPlans,
       isScanning: this.plugin.isScanning,
-      scanProgress: this.plugin.scanProgress,
+      logger: this.plugin.logger,
+      onCancelScan: () => {
+        this.plugin.cancelScan();
+        this.updateProps();
+      },
       onScanVault: async () => {
         await this.plugin.scanVault();
         this.updateProps();
@@ -77,7 +81,7 @@ export class RefactorView extends ItemView {
       clusters: [...this.plugin.candidateClusters],
       plans: { ...this.plugin.refactorPlans },
       isScanning: this.plugin.isScanning,
-      scanProgress: this.plugin.scanProgress
+      logger: this.plugin.logger
     };
 
     if (typeof this.component.$set === 'function') {

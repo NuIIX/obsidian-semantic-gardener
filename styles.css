@@ -1,5 +1,16 @@
 /* Semantic Gardener Styles */
 
+/* Container Query Context */
+.semantic-gardener-container {
+  container-type: inline-size;
+  container-name: gardener-root;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .semantic-gardener-root {
   display: flex;
   flex-direction: column;
@@ -16,30 +27,33 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 18px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--background-modifier-border);
   background-color: var(--background-secondary-alt);
   flex-shrink: 0;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .sg-header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .sg-logo {
-  font-size: 1.5em;
+  font-size: 1.4em;
 }
 
 .sg-title {
   margin: 0;
-  font-size: 1.25em;
+  font-size: 1.15em;
   font-weight: 700;
 }
 
 .sg-badge {
-  font-size: 0.78em;
+  font-size: 0.75em;
   padding: 2px 8px;
   border-radius: 12px;
   background-color: var(--background-modifier-border);
@@ -49,11 +63,16 @@
 .sg-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-/* Buttons */
+/* Dynamic Buttons */
 .sg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 6px 12px;
   border-radius: 6px;
   border: 1px solid var(--background-modifier-border);
@@ -63,6 +82,7 @@
   font-size: 0.85em;
   font-weight: 500;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .sg-btn:hover:not(:disabled) {
@@ -169,4 +189,73 @@
 
 .diff-unchanged {
   color: var(--text-normal);
+}
+
+/* Container Queries for Responsive Obsidian Panels */
+@container gardener-root (max-width: 680px) {
+  .sg-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .sg-header-actions {
+    display: flex;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .sg-header-actions .sg-btn {
+    flex: 1 1 auto;
+    padding: 6px 8px;
+    font-size: 0.82em;
+    min-width: 90px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Two-column into Stacked Mode */
+  .sg-body.view-mode-list .sg-main-content {
+    display: none !important;
+  }
+
+  .sg-body.view-mode-detail .sg-sidebar {
+    display: none !important;
+  }
+
+  .sg-body.view-mode-detail .sg-main-content {
+    width: 100% !important;
+  }
+
+  .sg-body.view-mode-list .sg-sidebar {
+    width: 100% !important;
+    border-right: none;
+  }
+
+  .narrow-nav-row {
+    display: flex !important;
+  }
+}
+
+@container gardener-root (max-width: 440px) {
+  .sg-header-actions .btn-text {
+    font-size: 0.82em;
+  }
+
+  .concept-footer-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .concept-footer-actions .sg-btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .concept-footer-actions .spacer {
+    display: none;
+  }
 }

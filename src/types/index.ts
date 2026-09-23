@@ -1,5 +1,3 @@
-import { TFile } from 'obsidian';
-
 export interface SemanticChunk {
   id: string; // SHA-256 hash of text
   filePath: string;
@@ -72,6 +70,25 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   excludedFolders: '.obsidian, .trash, templates, archive'
 };
 
+export type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'progress';
+
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+  details?: string;
+}
+
+export interface ProgressState {
+  phase: string;
+  percentage: number; // 0 - 100
+  message: string;
+  isScanning: boolean;
+  canCancel: boolean;
+  startTime?: number;
+}
+
 export interface WorkerMessageInit {
   type: 'INIT';
 }
@@ -84,6 +101,12 @@ export interface WorkerMessageEmbedBatch {
 
 export interface WorkerResponseReady {
   type: 'READY';
+}
+
+export interface WorkerResponseModelProgress {
+  type: 'MODEL_DOWNLOAD_PROGRESS';
+  file: string;
+  progress: number;
 }
 
 export interface WorkerResponseEmbedComplete {
@@ -99,4 +122,8 @@ export interface WorkerResponseError {
 }
 
 export type WorkerInMessage = WorkerMessageInit | WorkerMessageEmbedBatch;
-export type WorkerOutMessage = WorkerResponseReady | WorkerResponseEmbedComplete | WorkerResponseError;
+export type WorkerOutMessage =
+  | WorkerResponseReady
+  | WorkerResponseModelProgress
+  | WorkerResponseEmbedComplete
+  | WorkerResponseError;
