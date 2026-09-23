@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-semantic-gardener",
+  "name": "Semantic Gardener",
+  "version": "0.1.0",
+  "minAppVersion": "1.0.0",
+  "description": "Automated semantic deduplication and atomic note refactoring with surgical wiki-linking and undo history.",
+  "author": "NuIIX",
+  "authorUrl": "https://github.com/NuIIX",
+  "isDesktopOnly": false
+}
