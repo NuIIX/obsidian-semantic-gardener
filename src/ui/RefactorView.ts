@@ -1,13 +1,21 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import * as Svelte from 'svelte';
+import { writable, type Writable } from 'svelte/store';
 import ReviewModal from './components/ReviewModal.svelte';
 import type SemanticGardenerPlugin from '../main';
 import type { CandidateCluster, RefactorPlan } from '../types';
 
 export const VIEW_TYPE_REFACTOR = 'semantic-gardener-review';
 
+export interface GardenerViewState {
+  clusters: CandidateCluster[];
+  plans: Record<string, RefactorPlan>;
+  isScanning: boolean;
+}
+
 export class RefactorView extends ItemView {
   private component: any = null;
+  private store!: Writable<GardenerViewState>;
 
   constructor(leaf: WorkspaceLeaf, private plugin: SemanticGardenerPlugin) {
     super(leaf);
@@ -29,10 +37,17 @@ export class RefactorView extends ItemView {
     const container = this.contentEl;
     container.empty();
 
+    this.store = writable<GardenerViewState>({
+      clusters: [...this.plugin.candidateClusters],
+      plans: { ...this.plugin.refactorPlans },
+      isScanning: this.plugin.isScanning
+    });
+
     const props = {
       plugin: this.plugin,
-      clusters: this.plugin.candidateClusters,
-      plans: this.plugin.refactorPlans,
+      store: this.store,
+      clusters: [...this.plugin.candidateClusters],
+      plans: { ...this.plugin.refactorPlans },
       isScanning: this.plugin.isScanning,
       logger: this.plugin.logger,
       onCancelScan: () => {
@@ -45,6 +60,10 @@ export class RefactorView extends ItemView {
       },
       onScanActiveNote: async () => {
         await this.plugin.scanActiveNote();
+        this.updateProps();
+      },
+      onAnalyzeCluster: async (cluster: CandidateCluster) => {
+        await this.plugin.analyzeCluster(cluster);
         this.updateProps();
       },
       onApplyPlan: async (cluster: CandidateCluster, plan: RefactorPlan) => {
@@ -75,8 +94,6 @@ export class RefactorView extends ItemView {
   }
 
   updateProps() {
-    if (!this.component) return;
-
     const newProps = {
       clusters: [...this.plugin.candidateClusters],
       plans: { ...this.plugin.refactorPlans },
@@ -84,10 +101,26 @@ export class RefactorView extends ItemView {
       logger: this.plugin.logger
     };
 
-    if (typeof this.component.$set === 'function') {
+    if (this.store) {
+      this.store.set({
+        clusters: newProps.clusters,
+        plans: newProps.plans,
+        isScanning: newProps.isScanning
+      });
+    }
+
+    if (!this.component) return;
+
+    if (typeof this.component.updateState === 'function') {
+      this.component.updateState(
+        newProps.clusters,
+        newProps.plans,
+        newProps.isScanning,
+        newProps.logger
+      );
+    } else if (typeof this.component.$set === 'function') {
       this.component.$set(newProps);
     } else {
-      // Svelte 5 mounted component property sync
       Object.assign(this.component, newProps);
     }
   }

@@ -775,11 +775,11 @@ var STATUS_MASK = ~(DIRTY | MAYBE_DIRTY | CLEAN);
 function set_signal_status(signal, status) {
   signal.f = signal.f & STATUS_MASK | status;
 }
-function update_derived_status(derived2) {
-  if ((derived2.f & CONNECTED) !== 0 || derived2.deps === null) {
-    set_signal_status(derived2, CLEAN);
+function update_derived_status(derived3) {
+  if ((derived3.f & CONNECTED) !== 0 || derived3.deps === null) {
+    set_signal_status(derived3, CLEAN);
   } else {
-    set_signal_status(derived2, MAYBE_DIRTY);
+    set_signal_status(derived3, MAYBE_DIRTY);
   }
 }
 
@@ -1135,10 +1135,10 @@ function derived_safe_equal(fn) {
   signal.equals = safe_equals;
   return signal;
 }
-function destroy_derived_effects(derived2) {
-  var effects = derived2.effects;
+function destroy_derived_effects(derived3) {
+  var effects = derived3.effects;
   if (effects !== null) {
-    derived2.effects = null;
+    derived3.effects = null;
     for (var i = 0; i < effects.length; i += 1) {
       destroy_effect(
         /** @type {Effect} */
@@ -1148,26 +1148,26 @@ function destroy_derived_effects(derived2) {
   }
 }
 var stack = [];
-function execute_derived(derived2) {
+function execute_derived(derived3) {
   var value;
   var prev_active_effect = active_effect;
-  var parent = derived2.parent;
-  if (!is_destroying_effect && parent !== null && derived2.v !== UNINITIALIZED && // if it was never evaluated before, it's guaranteed to fail downstream, so we try to execute instead
+  var parent = derived3.parent;
+  if (!is_destroying_effect && parent !== null && derived3.v !== UNINITIALIZED && // if it was never evaluated before, it's guaranteed to fail downstream, so we try to execute instead
   (parent.f & (DESTROYED | INERT)) !== 0) {
     derived_inert();
-    return derived2.v;
+    return derived3.v;
   }
   set_active_effect(parent);
   if (dev_fallback_default) {
     let prev_eager_effects = eager_effects;
     set_eager_effects(/* @__PURE__ */ new Set());
     try {
-      if (includes.call(stack, derived2)) {
+      if (includes.call(stack, derived3)) {
         derived_references_self();
       }
-      stack.push(derived2);
-      destroy_derived_effects(derived2);
-      value = update_reaction(derived2);
+      stack.push(derived3);
+      destroy_derived_effects(derived3);
+      value = update_reaction(derived3);
     } finally {
       set_active_effect(prev_active_effect);
       set_eager_effects(prev_eager_effects);
@@ -1175,27 +1175,27 @@ function execute_derived(derived2) {
     }
   } else {
     try {
-      destroy_derived_effects(derived2);
-      value = update_reaction(derived2);
+      destroy_derived_effects(derived3);
+      value = update_reaction(derived3);
     } finally {
       set_active_effect(prev_active_effect);
     }
   }
   return value;
 }
-function update_derived(derived2) {
-  var value = execute_derived(derived2);
-  if (!derived2.equals(value)) {
-    derived2.wv = increment_write_version();
-    if (!current_batch?.is_fork || derived2.deps === null) {
+function update_derived(derived3) {
+  var value = execute_derived(derived3);
+  if (!derived3.equals(value)) {
+    derived3.wv = increment_write_version();
+    if (!current_batch?.is_fork || derived3.deps === null) {
       if (current_batch !== null) {
-        current_batch.capture(derived2, value, true);
-        previous_batch?.capture(derived2, value, true);
+        current_batch.capture(derived3, value, true);
+        previous_batch?.capture(derived3, value, true);
       } else {
-        derived2.v = value;
+        derived3.v = value;
       }
-      if (derived2.deps === null) {
-        set_signal_status(derived2, CLEAN);
+      if (derived3.deps === null) {
+        set_signal_status(derived3, CLEAN);
         return;
       }
     }
@@ -1205,15 +1205,15 @@ function update_derived(derived2) {
   }
   if (batch_values !== null) {
     if (effect_tracking() || current_batch?.is_fork) {
-      batch_values.set(derived2, value);
+      batch_values.set(derived3, value);
     }
   } else {
-    update_derived_status(derived2);
+    update_derived_status(derived3);
   }
 }
-function freeze_derived_effects(derived2) {
-  if (derived2.effects === null) return;
-  for (const e of derived2.effects) {
+function freeze_derived_effects(derived3) {
+  if (derived3.effects === null) return;
+  for (const e of derived3.effects) {
     if (e.teardown || e.ac) {
       e.teardown?.();
       if (e.ac !== null) {
@@ -1228,9 +1228,9 @@ function freeze_derived_effects(derived2) {
     }
   }
 }
-function unfreeze_derived_effects(derived2) {
-  if (derived2.effects === null) return;
-  for (const e of derived2.effects) {
+function unfreeze_derived_effects(derived3) {
+  if (derived3.effects === null) return;
+  for (const e of derived3.effects) {
     if (e.teardown && e.fn !== null) {
       update_effect(e);
     }
@@ -2203,15 +2203,15 @@ function internal_set(source2, value, updated_during_traversal = null) {
       }
     }
     if ((source2.f & DERIVED) !== 0) {
-      const derived2 = (
+      const derived3 = (
         /** @type {Derived} */
         source2
       );
       if ((source2.f & DIRTY) !== 0) {
-        execute_derived(derived2);
+        execute_derived(derived3);
       }
       if (batch_values === null) {
-        update_derived_status(derived2);
+        update_derived_status(derived3);
       }
     }
     source2.wv = increment_write_version();
@@ -2278,12 +2278,12 @@ function mark_reactions(signal, status, updated_during_traversal) {
         reaction
       );
     } else if ((flags2 & DERIVED) !== 0) {
-      var derived2 = (
+      var derived3 = (
         /** @type {Derived} */
         reaction
       );
-      batch_values?.delete(derived2);
-      mark_reactions(derived2, MAYBE_DIRTY, updated_during_traversal);
+      batch_values?.delete(derived3);
+      mark_reactions(derived3, MAYBE_DIRTY, updated_during_traversal);
     } else if (not_dirty) {
       var effect2 = (
         /** @type {Effect} */
@@ -2956,11 +2956,11 @@ function create_effect(type, fn) {
       push_effect(e, parent);
     }
     if (active_reaction !== null && (active_reaction.f & DERIVED) !== 0 && (type & ROOT_EFFECT) === 0) {
-      var derived2 = (
+      var derived3 = (
         /** @type {Derived} */
         active_reaction
       );
-      (derived2.effects ??= []).push(e);
+      (derived3.effects ??= []).push(e);
     }
   }
   return effect2;
@@ -3506,25 +3506,25 @@ function remove_reaction(signal, dependency) {
   // to be unused, when in fact it is used by the currently-updating parent. Checking `new_deps`
   // allows us to skip the expensive work of disconnecting and immediately reconnecting it
   (new_deps === null || !includes.call(new_deps, dependency))) {
-    var derived2 = (
+    var derived3 = (
       /** @type {Derived} */
       dependency
     );
-    if ((derived2.f & CONNECTED) !== 0) {
-      derived2.f ^= CONNECTED;
+    if ((derived3.f & CONNECTED) !== 0) {
+      derived3.f ^= CONNECTED;
     }
-    if (derived2.v !== UNINITIALIZED) {
-      update_derived_status(derived2);
+    if (derived3.v !== UNINITIALIZED) {
+      update_derived_status(derived3);
     }
-    if (derived2.ac !== null) {
+    if (derived3.ac !== null) {
       without_reactive_context(() => {
-        derived2.ac.abort(STALE_REACTION);
-        derived2.ac = null;
-        set_signal_status(derived2, DIRTY);
+        derived3.ac.abort(STALE_REACTION);
+        derived3.ac = null;
+        set_signal_status(derived3, DIRTY);
       });
     }
-    freeze_derived_effects(derived2);
-    remove_reactions(derived2, 0);
+    freeze_derived_effects(derived3);
+    remove_reactions(derived3, 0);
   }
 }
 function remove_reactions(signal, start_index) {
@@ -3660,29 +3660,29 @@ function get(signal) {
     return old_values.get(signal);
   }
   if (is_derived) {
-    var derived2 = (
+    var derived3 = (
       /** @type {Derived} */
       signal
     );
     if (is_destroying_effect) {
-      var value = derived2.v;
-      if ((derived2.f & CLEAN) === 0 && derived2.reactions !== null || depends_on_old_values(derived2)) {
-        value = execute_derived(derived2);
+      var value = derived3.v;
+      if ((derived3.f & CLEAN) === 0 && derived3.reactions !== null || depends_on_old_values(derived3)) {
+        value = execute_derived(derived3);
       }
-      old_values.set(derived2, value);
+      old_values.set(derived3, value);
       return value;
     }
-    var should_connect = (derived2.f & CONNECTED) === 0 && !untracking && active_reaction !== null && (is_updating_effect || (active_reaction.f & CONNECTED) !== 0);
-    var is_new = (derived2.f & REACTION_RAN) === 0;
-    if (is_dirty(derived2)) {
+    var should_connect = (derived3.f & CONNECTED) === 0 && !untracking && active_reaction !== null && (is_updating_effect || (active_reaction.f & CONNECTED) !== 0);
+    var is_new = (derived3.f & REACTION_RAN) === 0;
+    if (is_dirty(derived3)) {
       if (should_connect) {
-        derived2.f |= CONNECTED;
+        derived3.f |= CONNECTED;
       }
-      update_derived(derived2);
+      update_derived(derived3);
     }
     if (should_connect && !is_new) {
-      unfreeze_derived_effects(derived2);
-      reconnect(derived2);
+      unfreeze_derived_effects(derived3);
+      reconnect(derived3);
     }
   }
   if (batch_values?.has(signal)) {
@@ -3693,11 +3693,11 @@ function get(signal) {
   }
   return signal.v;
 }
-function reconnect(derived2) {
-  derived2.f |= CONNECTED;
-  if (derived2.deps === null) return;
-  for (const dep of derived2.deps) {
-    (dep.reactions ??= []).push(derived2);
+function reconnect(derived3) {
+  derived3.f |= CONNECTED;
+  if (derived3.deps === null) return;
+  for (const dep of derived3.deps) {
+    (dep.reactions ??= []).push(derived3);
     if ((dep.f & DERIVED) !== 0 && (dep.f & CONNECTED) === 0) {
       unfreeze_derived_effects(
         /** @type {Derived} */
@@ -3710,10 +3710,10 @@ function reconnect(derived2) {
     }
   }
 }
-function depends_on_old_values(derived2) {
-  if (derived2.v === UNINITIALIZED) return true;
-  if (derived2.deps === null) return false;
-  for (const dep of derived2.deps) {
+function depends_on_old_values(derived3) {
+  if (derived3.v === UNINITIALIZED) return true;
+  if (derived3.deps === null) return false;
+  for (const dep of derived3.deps) {
     if (old_values.has(dep)) {
       return true;
     }
@@ -5835,6 +5835,17 @@ function to_number(value) {
   return value === "" ? null : +value;
 }
 
+// node_modules/svelte/src/internal/client/dom/elements/bindings/props.js
+function bind_prop(props, prop2, value) {
+  var desc = get_descriptor(props, prop2);
+  if (desc && desc.set) {
+    props[prop2] = value;
+    teardown(() => {
+      props[prop2] = null;
+    });
+  }
+}
+
 // node_modules/svelte/src/internal/client/dom/elements/bindings/this.js
 function is_bound_this(bound_value, element_or_component) {
   return bound_value === element_or_component || bound_value?.[STATE_SYMBOL] === element_or_component;
@@ -5942,9 +5953,129 @@ function observe_all(context, props) {
   props();
 }
 
+// node_modules/svelte/src/store/utils.js
+function subscribe_to_store(store, run3, invalidate) {
+  if (store == null) {
+    run3(void 0);
+    if (invalidate) invalidate(void 0);
+    return noop;
+  }
+  const unsub = untrack(
+    () => store.subscribe(
+      run3,
+      // @ts-expect-error
+      invalidate
+    )
+  );
+  return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
+}
+
+// node_modules/svelte/src/store/shared/index.js
+var subscriber_queue = [];
+function writable(value, start = noop) {
+  let stop = null;
+  const subscribers = /* @__PURE__ */ new Set();
+  function set2(new_value) {
+    if (safe_not_equal(value, new_value)) {
+      value = new_value;
+      if (stop) {
+        const run_queue = !subscriber_queue.length;
+        for (const subscriber of subscribers) {
+          subscriber[1]();
+          subscriber_queue.push(subscriber, value);
+        }
+        if (run_queue) {
+          for (let i = 0; i < subscriber_queue.length; i += 2) {
+            subscriber_queue[i][0](subscriber_queue[i + 1]);
+          }
+          subscriber_queue.length = 0;
+        }
+      }
+    }
+  }
+  function update2(fn) {
+    set2(fn(
+      /** @type {T} */
+      value
+    ));
+  }
+  function subscribe(run3, invalidate = noop) {
+    const subscriber = [run3, invalidate];
+    subscribers.add(subscriber);
+    if (subscribers.size === 1) {
+      stop = start(set2, update2) || noop;
+    }
+    run3(
+      /** @type {T} */
+      value
+    );
+    return () => {
+      subscribers.delete(subscriber);
+      if (subscribers.size === 0 && stop) {
+        stop();
+        stop = null;
+      }
+    };
+  }
+  return { set: set2, update: update2, subscribe };
+}
+function get2(store) {
+  let value;
+  subscribe_to_store(store, (_) => value = _)();
+  return value;
+}
+
 // node_modules/svelte/src/internal/client/reactivity/store.js
 var is_store_binding = false;
 var IS_UNMOUNTED = Symbol("unmounted");
+function store_get(store, store_name, stores) {
+  const entry = stores[store_name] ??= {
+    store: null,
+    source: mutable_source(void 0),
+    unsubscribe: noop
+  };
+  if (dev_fallback_default) {
+    entry.source.label = store_name;
+  }
+  if (entry.store !== store && !(IS_UNMOUNTED in stores)) {
+    entry.unsubscribe();
+    entry.store = store ?? null;
+    if (store == null) {
+      entry.source.v = void 0;
+      entry.unsubscribe = noop;
+    } else {
+      var is_synchronous_callback = true;
+      entry.unsubscribe = subscribe_to_store(store, (v) => {
+        if (is_synchronous_callback) {
+          entry.source.v = v;
+        } else {
+          set(entry.source, v);
+        }
+      });
+      is_synchronous_callback = false;
+    }
+  }
+  if (store && IS_UNMOUNTED in stores) {
+    return get2(store);
+  }
+  return get(entry.source);
+}
+function setup_stores() {
+  const stores = {};
+  function cleanup() {
+    teardown(() => {
+      for (var store_name in stores) {
+        const ref = stores[store_name];
+        ref.unsubscribe();
+      }
+      define_property(stores, IS_UNMOUNTED, {
+        enumerable: false,
+        value: true
+      });
+    });
+  }
+  return [stores, cleanup];
+}
 function capture_store_binding(fn) {
   var previous_is_store_binding = is_store_binding;
   try {
@@ -7579,16 +7710,21 @@ var root_35 = from_html(`<div class="empty-selection svelte-71f0fw"><div class="
               \u043F\u043E\u0441\u043B\u043E\u0432\u043D\u044B\u0439 diff \u0438 \u043D\u0430\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0443\u044E \u0437\u0430\u043C\u0435\u043D\u0443.</p></div>`);
 var root_43 = from_html(`<div class="gatekeeper-banner approved svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u2713</span> <div><strong>LLM Gatekeeper:</strong> \u0421\u043C\u044B\u0441\u043B\u043E\u0432\u043E\u0435 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u043E.
                       \u0421\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u043D \u043F\u043B\u0430\u043D \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u043F\u0440\u0430\u0432\u043E\u043A.</div></div>`);
-var root_53 = from_html(`<div class="gatekeeper-banner rejected svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u2715</span> <div><strong>LLM Gatekeeper \u043E\u0442\u043A\u043B\u043E\u043D\u0438\u043B \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435:</strong> </div></div>`);
-var root_62 = from_html(`<div class="gatekeeper-banner pending svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u23F3</span> <div><strong>\u0410\u043D\u0430\u043B\u0438\u0437 \u0432 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u0435:</strong> \u041E\u0442\u043F\u0440\u0430\u0432\u043A\u0430 \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432 \u0432 Gemini...</div></div>`);
-var root_72 = from_html(`<div class="no-mods svelte-71f0fw"><p>\u0414\u043B\u044F \u0434\u0430\u043D\u043D\u043E\u0433\u043E \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 \u043D\u0435\u0442 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0430\u0432\u043E\u043A (\u0438\u043B\u0438 \u043A\u043B\u0430\u0441\u0442\u0435\u0440
-                        \u0431\u044B\u043B \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D Gatekeeper).</p></div>`);
-var root_82 = from_html(`<div class="modifications-list svelte-71f0fw"><!></div>`);
-var root_9 = from_html(`<div class="note-preview-pane svelte-71f0fw"><label for="atomic-note-textarea" class="concept-label svelte-71f0fw">\u0421\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435 \u043D\u043E\u0432\u043E\u0439 \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 (Markdown):</label> <textarea id="atomic-note-textarea" class="atomic-note-editor svelte-71f0fw" rows="12" placeholder="# \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435
+var root_53 = from_html(`<button class="sg-btn sg-btn-sm svelte-71f0fw" style="margin-top: 8px;"> </button>`);
+var root_62 = from_html(`<div class="gatekeeper-banner rejected svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u2715</span> <div><strong>LLM Gatekeeper \u043E\u0442\u043A\u043B\u043E\u043D\u0438\u043B \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435:</strong> </div> <!></div>`);
+var root_72 = from_html(`<div><button class="sg-btn sg-btn-primary sg-btn-sm svelte-71f0fw"> </button></div>`);
+var root_82 = from_html(`<div class="gatekeeper-banner pending svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u23F3</span> <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;"><div><strong>\u041F\u043B\u0430\u043D \u0435\u0449\u0435 \u043D\u0435 \u0441\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u043D:</strong> \u0412\u0435\u043A\u0442\u043E\u0440\u043D\u043E\u0435 \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u043E \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u043E, \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0433\u043E\u0442\u043E\u0432 \u043A \u0430\u043D\u0430\u043B\u0438\u0437\u0443.</div> <!></div></div>`);
+var root_9 = from_html(`<div class="concept-title-row svelte-71f0fw"><label for="concept-title-input" class="concept-label svelte-71f0fw">\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043A\u0430\u043D\u043E\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438:</label> <input id="concept-title-input" type="text" class="concept-title-input svelte-71f0fw" placeholder="\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440: \u0417\u0430\u043A\u043E\u043D \u041B\u0438\u0442\u0442\u043B\u0430"/></div> <div class="tab-bar svelte-71f0fw"><button> </button> <button>\u{1F4DD} \u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0432\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438</button></div>`, 1);
+var root_10 = from_html(`<div class="no-mods svelte-71f0fw"><p>\u0414\u043B\u044F \u0434\u0430\u043D\u043D\u043E\u0433\u043E \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 \u043D\u0435\u0442 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0430\u0432\u043E\u043A (\u0438\u043B\u0438 \u043A\u043B\u0430\u0441\u0442\u0435\u0440
+                          \u0431\u044B\u043B \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D Gatekeeper).</p></div>`);
+var root_11 = from_html(`<div class="modifications-list svelte-71f0fw"><!></div>`);
+var root_122 = from_html(`<div class="note-preview-pane svelte-71f0fw"><label for="atomic-note-textarea" class="concept-label svelte-71f0fw">\u0421\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435 \u043D\u043E\u0432\u043E\u0439 \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 (Markdown):</label> <textarea id="atomic-note-textarea" class="atomic-note-editor svelte-71f0fw" rows="12" placeholder="# \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435
 
 \u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0432\u043E\u0439 \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438..."></textarea></div>`);
-var root_10 = from_html(`<div class="concept-workspace svelte-71f0fw"><div class="narrow-nav-row svelte-71f0fw"><button class="sg-btn sg-btn-sm svelte-71f0fw" title="\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u043A \u0441\u043F\u0438\u0441\u043A\u0443 \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432"> </button> <span class="narrow-concept-label svelte-71f0fw"> </span></div> <div class="concept-header-box svelte-71f0fw"><!> <div class="concept-title-row svelte-71f0fw"><label for="concept-title-input" class="concept-label svelte-71f0fw">\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043A\u0430\u043D\u043E\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438:</label> <input id="concept-title-input" type="text" class="concept-title-input svelte-71f0fw" placeholder="\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440: \u0417\u0430\u043A\u043E\u043D \u041B\u0438\u0442\u0442\u043B\u0430"/></div> <div class="tab-bar svelte-71f0fw"><button> </button> <button>\u{1F4DD} \u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0432\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438</button></div></div> <div class="tab-content svelte-71f0fw"><!></div> <div class="concept-footer-actions svelte-71f0fw"><button class="sg-btn sg-btn-danger svelte-71f0fw" title="\u0418\u0441\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0438\u0437 \u043E\u0447\u0435\u0440\u0435\u0434\u0438">\u041E\u0442\u043A\u043B\u043E\u043D\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442</button> <div class="spacer svelte-71f0fw"></div> <button class="sg-btn sg-btn-primary sg-btn-large svelte-71f0fw" title="\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0437\u0430\u043C\u0435\u0442\u043A\u0443 \u0438 \u043F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0437\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 \u0441 \u0437\u0430\u043F\u0438\u0441\u044C\u044E \u0432 \u0436\u0443\u0440\u043D\u0430\u043B \u0438\u0441\u0442\u043E\u0440\u0438\u0438">\u{1F680} \u041F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433</button></div></div>`);
-var root_11 = from_html(`<div class="semantic-gardener-container svelte-71f0fw"><div class="semantic-gardener-root svelte-71f0fw"><header class="sg-header svelte-71f0fw"><div class="sg-header-left svelte-71f0fw"><span class="sg-logo svelte-71f0fw">\u{1F331}</span> <h2 class="sg-title svelte-71f0fw">Semantic Gardener</h2> <span class="sg-badge svelte-71f0fw"> </span></div> <div class="sg-header-actions svelte-71f0fw"><button class="sg-btn svelte-71f0fw" title="\u041F\u043E\u0438\u0441\u043A \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0434\u043B\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438"><span class="btn-icon svelte-71f0fw">\u{1F4C4}</span> <span class="btn-text svelte-71f0fw">\u0410\u043A\u0442\u0438\u0432\u043D\u0430\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0430</span></button> <button class="sg-btn sg-btn-primary svelte-71f0fw" title="\u041F\u043E\u043B\u043D\u043E\u0435 \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430"><span class="btn-icon svelte-71f0fw">\u{1F50D}</span> <span class="btn-text svelte-71f0fw">\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C Vault</span></button> <button class="sg-btn sg-btn-undo svelte-71f0fw" title="\u041E\u0442\u043A\u0430\u0442\u0438\u0442\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433 \u0432 1 \u043A\u043B\u0438\u043A"><span class="btn-icon svelte-71f0fw">\u21A9</span> <span class="btn-text svelte-71f0fw"> </span></button></div></header> <!> <div><aside class="sg-sidebar svelte-71f0fw"><div class="sidebar-header svelte-71f0fw"><span>\u041E\u0447\u0435\u0440\u0435\u0434\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432</span> <span class="count-pill svelte-71f0fw"> </span></div> <div class="cluster-list svelte-71f0fw"><!></div></aside> <main class="sg-main-content svelte-71f0fw"><!></main></div></div></div>`);
+var root_132 = from_html(`<div class="tab-content svelte-71f0fw"><!></div>`);
+var root_142 = from_html(`<div class="no-mods svelte-71f0fw" style="padding: 32px 16px; text-align: center;"><p>\u041D\u0430\u0436\u043C\u0438\u0442\u0435 <strong>\xAB\u26A1 \u0421\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043F\u043B\u0430\u043D \u0447\u0435\u0440\u0435\u0437 Gemini\xBB</strong> \u0432\u044B\u0448\u0435, \u0447\u0442\u043E\u0431\u044B \u0441\u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430 \u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0432\u0441\u0442\u0430\u0432\u043A\u0438.</p></div>`);
+var root_152 = from_html(`<div class="concept-workspace svelte-71f0fw"><div class="narrow-nav-row svelte-71f0fw"><button class="sg-btn sg-btn-sm svelte-71f0fw" title="\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u043A \u0441\u043F\u0438\u0441\u043A\u0443 \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432"> </button> <span class="narrow-concept-label svelte-71f0fw"> </span></div> <div class="concept-header-box svelte-71f0fw"><!> <!></div> <!> <div class="concept-footer-actions svelte-71f0fw"><button class="sg-btn sg-btn-danger svelte-71f0fw" title="\u0418\u0441\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0438\u0437 \u043E\u0447\u0435\u0440\u0435\u0434\u0438">\u041E\u0442\u043A\u043B\u043E\u043D\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442</button> <div class="spacer svelte-71f0fw"></div> <button class="sg-btn sg-btn-primary sg-btn-large svelte-71f0fw" title="\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0437\u0430\u043C\u0435\u0442\u043A\u0443 \u0438 \u043F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0437\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 \u0441 \u0437\u0430\u043F\u0438\u0441\u044C\u044E \u0432 \u0436\u0443\u0440\u043D\u0430\u043B \u0438\u0441\u0442\u043E\u0440\u0438\u0438">\u{1F680} \u041F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433</button></div></div>`);
+var root_16 = from_html(`<div class="semantic-gardener-container svelte-71f0fw"><div class="semantic-gardener-root svelte-71f0fw"><header class="sg-header svelte-71f0fw"><div class="sg-header-left svelte-71f0fw"><span class="sg-logo svelte-71f0fw">\u{1F331}</span> <h2 class="sg-title svelte-71f0fw">Semantic Gardener</h2> <span class="sg-badge svelte-71f0fw"> </span></div> <div class="sg-header-actions svelte-71f0fw"><button class="sg-btn svelte-71f0fw" title="\u041F\u043E\u0438\u0441\u043A \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0434\u043B\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438"><span class="btn-icon svelte-71f0fw">\u{1F4C4}</span> <span class="btn-text svelte-71f0fw">\u0410\u043A\u0442\u0438\u0432\u043D\u0430\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0430</span></button> <button class="sg-btn sg-btn-primary svelte-71f0fw" title="\u041F\u043E\u043B\u043D\u043E\u0435 \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430"><span class="btn-icon svelte-71f0fw">\u{1F50D}</span> <span class="btn-text svelte-71f0fw">\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C Vault</span></button> <button class="sg-btn sg-btn-undo svelte-71f0fw" title="\u041E\u0442\u043A\u0430\u0442\u0438\u0442\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433 \u0432 1 \u043A\u043B\u0438\u043A"><span class="btn-icon svelte-71f0fw">\u21A9</span> <span class="btn-text svelte-71f0fw"> </span></button></div></header> <!> <div><aside class="sg-sidebar svelte-71f0fw"><div class="sidebar-header svelte-71f0fw"><span>\u041E\u0447\u0435\u0440\u0435\u0434\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432</span> <span class="count-pill svelte-71f0fw"> </span></div> <div class="cluster-list svelte-71f0fw"><!></div></aside> <main class="sg-main-content svelte-71f0fw"><!></main></div></div></div>`);
 var $$css5 = {
   hash: "svelte-71f0fw",
   code: ".semantic-gardener-container.svelte-71f0fw {container-type:inline-size;container-name:gardener-root;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}.semantic-gardener-root.svelte-71f0fw {display:flex;flex-direction:column;height:100%;width:100%;background-color:var(--background-primary);color:var(--text-normal);font-family:var(--font-text);overflow:hidden;}\n\n  /* Header */.sg-header.svelte-71f0fw {display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--background-modifier-border);background-color:var(--background-secondary-alt);flex-shrink:0;gap:10px;flex-wrap:wrap;}.sg-header-left.svelte-71f0fw {display:flex;align-items:center;gap:8px;flex-shrink:0;}.sg-logo.svelte-71f0fw {font-size:1.4em;}.sg-title.svelte-71f0fw {margin:0;font-size:1.15em;font-weight:700;}.sg-badge.svelte-71f0fw {font-size:0.75em;padding:2px 8px;border-radius:12px;background-color:var(--background-modifier-border);color:var(--text-muted);}.sg-header-actions.svelte-71f0fw {display:flex;align-items:center;gap:6px;flex-wrap:wrap;}\n\n  /* Dynamic Buttons */.sg-btn.svelte-71f0fw {display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 12px;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-primary);color:var(--text-normal);cursor:pointer;font-size:0.85em;font-weight:500;transition:all 0.15s ease;white-space:nowrap;}.sg-btn.svelte-71f0fw:hover:not(:disabled) {background-color:var(--background-modifier-hover);border-color:var(--interactive-accent);}.sg-btn.svelte-71f0fw:disabled {opacity:0.45;cursor:not-allowed;}.sg-btn-primary.svelte-71f0fw {background-color:var(--interactive-accent);color:var(--text-on-accent);border-color:var(--interactive-accent);}.sg-btn-primary.svelte-71f0fw:hover:not(:disabled) {background-color:var(--interactive-accent-hover);}.sg-btn-danger.svelte-71f0fw {color:var(--text-error, #f85149);border-color:rgba(248, 81, 73, 0.4);}.sg-btn-danger.svelte-71f0fw:hover {background-color:rgba(248, 81, 73, 0.15);}.sg-btn-undo.svelte-71f0fw {border-color:var(--background-modifier-border);}.sg-btn-large.svelte-71f0fw {padding:8px 18px;font-size:0.95em;font-weight:600;}.sg-btn-sm.svelte-71f0fw {padding:4px 8px;font-size:0.8em;}.btn-icon.svelte-71f0fw {font-size:0.95em;}\n\n  /* Body Layout */.sg-body.svelte-71f0fw {display:flex;flex:1;overflow:hidden;}\n\n  /* Left Sidebar */.sg-sidebar.svelte-71f0fw {width:320px;border-right:1px solid var(--background-modifier-border);display:flex;flex-direction:column;background-color:var(--background-secondary);flex-shrink:0;}.sidebar-header.svelte-71f0fw {display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:0.85em;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--background-modifier-border);}.count-pill.svelte-71f0fw {padding:1px 6px;border-radius:10px;background-color:var(--background-modifier-border);font-size:0.85em;}.cluster-list.svelte-71f0fw {flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px;}.empty-clusters.svelte-71f0fw {padding:30px 16px;text-align:center;color:var(--text-muted);font-size:0.88em;}\n\n  /* Main Workspace */.sg-main-content.svelte-71f0fw {flex:1;overflow-y:auto;display:flex;flex-direction:column;background-color:var(--background-primary);}.empty-selection.svelte-71f0fw {display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:var(--text-muted);}.empty-icon.svelte-71f0fw {font-size:3em;margin-bottom:16px;opacity:0.7;}.concept-workspace.svelte-71f0fw {display:flex;flex-direction:column;min-height:100%;padding:16px 20px;gap:16px;}.narrow-nav-row.svelte-71f0fw {display:none;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--background-modifier-border);}.narrow-concept-label.svelte-71f0fw {font-weight:600;font-size:0.9em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-accent);}.concept-header-box.svelte-71f0fw {display:flex;flex-direction:column;gap:12px;}.gatekeeper-banner.svelte-71f0fw {display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:6px;font-size:0.88em;line-height:1.4;}.gatekeeper-banner.approved.svelte-71f0fw {background-color:rgba(46, 160, 67, 0.15);border:1px solid rgba(46, 160, 67, 0.35);color:var(--text-success, #3fb950);}.gatekeeper-banner.rejected.svelte-71f0fw {background-color:rgba(248, 81, 73, 0.15);border:1px solid rgba(248, 81, 73, 0.35);color:var(--text-error, #f85149);}.gatekeeper-banner.pending.svelte-71f0fw {background-color:rgba(210, 153, 34, 0.15);border:1px solid rgba(210, 153, 34, 0.35);color:var(--text-warning, #d29922);}.banner-icon.svelte-71f0fw {font-weight:700;font-size:1.2em;flex-shrink:0;}.concept-title-row.svelte-71f0fw {display:flex;flex-direction:column;gap:6px;}.concept-label.svelte-71f0fw {font-size:0.85em;font-weight:600;color:var(--text-muted);}.concept-title-input.svelte-71f0fw {width:100%;padding:8px 12px;font-size:1.05em;font-weight:600;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-secondary);color:var(--text-normal);}.concept-title-input.svelte-71f0fw:focus {border-color:var(--interactive-accent);outline:none;}.tab-bar.svelte-71f0fw {display:flex;gap:8px;border-bottom:1px solid var(--background-modifier-border);padding-bottom:4px;flex-wrap:wrap;}.tab-btn.svelte-71f0fw {background:transparent;border:none;color:var(--text-muted);font-size:0.88em;padding:6px 12px;border-radius:4px;cursor:pointer;transition:color 0.15s ease;}.tab-btn.svelte-71f0fw:hover {color:var(--text-normal);}.tab-btn.active.svelte-71f0fw {color:var(--interactive-accent);font-weight:600;border-bottom:2px solid var(--interactive-accent);border-radius:0;}.tab-content.svelte-71f0fw {flex:1;}.modifications-list.svelte-71f0fw {display:flex;flex-direction:column;gap:12px;}.no-mods.svelte-71f0fw {padding:20px;color:var(--text-muted);font-style:italic;}.note-preview-pane.svelte-71f0fw {display:flex;flex-direction:column;gap:8px;}.atomic-note-editor.svelte-71f0fw {width:100%;font-family:var(--font-monospace);font-size:0.9em;line-height:1.5;padding:12px;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-secondary);color:var(--text-normal);resize:vertical;}.concept-footer-actions.svelte-71f0fw {display:flex;align-items:center;padding-top:14px;border-top:1px solid var(--background-modifier-border);margin-top:auto;flex-wrap:wrap;gap:10px;}.spacer.svelte-71f0fw {flex:1;}\n\n  /* Container Queries for Adaptive Responsive Layout */\n  @container gardener-root (max-width: 680px) {.sg-header.svelte-71f0fw {flex-direction:column;align-items:stretch;gap:8px;padding:8px 12px;}.sg-header-actions.svelte-71f0fw {display:flex;width:100%;gap:6px;}.sg-header-actions.svelte-71f0fw .sg-btn:where(.svelte-71f0fw) {flex:1 1 auto;padding:6px 8px;font-size:0.82em;}\n\n    /* Stacked View: only show active view mode in narrow mode */.sg-body.view-mode-list.svelte-71f0fw .sg-main-content:where(.svelte-71f0fw) {display:none !important;}.sg-body.view-mode-detail.svelte-71f0fw .sg-sidebar:where(.svelte-71f0fw) {display:none !important;}.sg-body.view-mode-detail.svelte-71f0fw .sg-main-content:where(.svelte-71f0fw) {width:100% !important;}.sg-body.view-mode-list.svelte-71f0fw .sg-sidebar:where(.svelte-71f0fw) {width:100% !important;border-right:none;}.narrow-nav-row.svelte-71f0fw {display:flex !important;}\n  }\n\n  @container gardener-root (max-width: 440px) {.sg-header-actions.svelte-71f0fw .btn-text:where(.svelte-71f0fw) {font-size:0.82em;}.concept-footer-actions.svelte-71f0fw {flex-direction:column-reverse;align-items:stretch;gap:8px;}.concept-footer-actions.svelte-71f0fw .sg-btn:where(.svelte-71f0fw) {width:100%;text-align:center;justify-content:center;}.concept-footer-actions.svelte-71f0fw .spacer:where(.svelte-71f0fw) {display:none;}\n  }"
@@ -7596,16 +7732,20 @@ var $$css5 = {
 function ReviewModal($$anchor, $$props) {
   push($$props, false);
   append_styles($$anchor, $$css5);
+  const $store = () => store_get(store(), "$store", $$stores);
+  const [$$stores, $$cleanup] = setup_stores();
   const selectedCluster = mutable_source();
   const selectedPlan = mutable_source();
-  let plugin = prop($$props, "plugin", 8);
-  let clusters = prop($$props, "clusters", 24, () => []);
-  let plans = prop($$props, "plans", 24, () => ({}));
-  let isScanning = prop($$props, "isScanning", 8, false);
-  let logger = prop($$props, "logger", 8, void 0);
+  let plugin = prop($$props, "plugin", 8, void 0);
+  let store = prop($$props, "store", 8, void 0);
+  let clusters = prop($$props, "clusters", 28, () => []);
+  let plans = prop($$props, "plans", 28, () => ({}));
+  let isScanning = prop($$props, "isScanning", 12, false);
+  let logger = prop($$props, "logger", 12, void 0);
   let onCancelScan = prop($$props, "onCancelScan", 8, void 0);
   let onScanVault = prop($$props, "onScanVault", 8);
   let onScanActiveNote = prop($$props, "onScanActiveNote", 8);
+  let onAnalyzeCluster = prop($$props, "onAnalyzeCluster", 8, void 0);
   let onApplyPlan = prop($$props, "onApplyPlan", 8);
   let onRejectCluster = prop($$props, "onRejectCluster", 8);
   let onUndoLast = prop($$props, "onUndoLast", 8);
@@ -7613,6 +7753,14 @@ function ReviewModal($$anchor, $$props) {
   let activeTab = mutable_source("modifications");
   let historyCount = mutable_source(0);
   let activeViewMode = mutable_source("list");
+  let isAnalyzingSingle = mutable_source(false);
+  function updateState(newClusters, newPlans, newIsScanning, newLogger) {
+    clusters([...newClusters]);
+    plans({ ...newPlans });
+    isScanning(newIsScanning);
+    if (newLogger) logger(newLogger);
+    updateHistoryCount();
+  }
   function selectCluster(id) {
     set(selectedClusterId, id);
     set(activeViewMode, "detail");
@@ -7624,7 +7772,23 @@ function ReviewModal($$anchor, $$props) {
   }
   onMount(() => {
     updateHistoryCount();
+    if (plugin()) {
+      if ((!clusters() || clusters().length === 0) && plugin().candidateClusters?.length > 0) {
+        clusters([...plugin().candidateClusters]);
+        plans({ ...plugin().refactorPlans });
+        isScanning(plugin().isScanning);
+      }
+    }
   });
+  async function handleAnalyzeSingle() {
+    if (!get(selectedCluster) || !onAnalyzeCluster()) return;
+    set(isAnalyzingSingle, true);
+    try {
+      await onAnalyzeCluster()(get(selectedCluster));
+    } finally {
+      set(isAnalyzingSingle, false);
+    }
+  }
   async function handleApply() {
     if (!get(selectedCluster) || !get(selectedPlan)) return;
     await onApplyPlan()(get(selectedCluster), get(selectedPlan));
@@ -7634,6 +7798,13 @@ function ReviewModal($$anchor, $$props) {
     await onUndoLast()();
     updateHistoryCount();
   }
+  legacy_pre_effect(() => (deep_read_state(store()), $store()), () => {
+    if (store() && $store()) {
+      if ($store().clusters) clusters($store().clusters);
+      if ($store().plans) plans($store().plans);
+      if ($store().isScanning !== void 0) isScanning($store().isScanning);
+    }
+  });
   legacy_pre_effect(() => (get(selectedClusterId), deep_read_state(clusters())), () => {
     if (!get(selectedClusterId) && clusters().length > 0) {
       set(selectedClusterId, clusters()[0].id);
@@ -7646,8 +7817,9 @@ function ReviewModal($$anchor, $$props) {
     set(selectedPlan, get(selectedCluster) ? plans()[get(selectedCluster).id] : null);
   });
   legacy_pre_effect_reset();
+  var $$exports = { updateState };
   init();
-  var div = root_11();
+  var div = root_16();
   var div_1 = child(div);
   var header = child(div_1);
   var div_2 = child(header);
@@ -7741,8 +7913,8 @@ function ReviewModal($$anchor, $$props) {
       var div_8 = root_35();
       append($$anchor2, div_8);
     };
-    var alternate_6 = ($$anchor2) => {
-      var div_9 = root_10();
+    var alternate_7 = ($$anchor2) => {
+      var div_9 = root_152();
       var div_10 = child(div_9);
       var button_4 = child(div_10);
       var text_3 = only_child(button_4);
@@ -7752,7 +7924,7 @@ function ReviewModal($$anchor, $$props) {
       var div_11 = sibling(div_10, 2);
       var node_5 = child(div_11);
       {
-        var consequent_4 = ($$anchor3) => {
+        var consequent_5 = ($$anchor3) => {
           var fragment_3 = comment();
           var node_6 = first_child(fragment_3);
           {
@@ -7761,10 +7933,26 @@ function ReviewModal($$anchor, $$props) {
               append($$anchor4, div_12);
             };
             var alternate_2 = ($$anchor4) => {
-              var div_13 = root_53();
+              var div_13 = root_62();
               var div_14 = sibling(child(div_13), 2);
               var text_5 = sibling(child(div_14));
               reset(div_14);
+              var node_7 = sibling(div_14, 2);
+              {
+                var consequent_4 = ($$anchor5) => {
+                  var button_5 = root_53();
+                  var text_6 = only_child(button_5, true);
+                  template_effect(() => {
+                    button_5.disabled = get(isAnalyzingSingle) || isScanning();
+                    set_text(text_6, get(isAnalyzingSingle) ? "\u23F3 \u0410\u043D\u0430\u043B\u0438\u0437..." : "\u{1F504} \u041F\u0435\u0440\u0435\u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0432 Gemini");
+                  });
+                  event("click", button_5, handleAnalyzeSingle);
+                  append($$anchor5, button_5);
+                };
+                if_block(node_7, ($$render) => {
+                  if (onAnalyzeCluster()) $$render(consequent_4);
+                });
+              }
               reset(div_13);
               template_effect(() => set_text(text_5, ` ${(get(selectedPlan), untrack(() => get(selectedPlan).rejectionReason || "\u0420\u0430\u0437\u043D\u044B\u0435 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043D\u044B\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u0438\u043B\u0438 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442.")) ?? ""}`));
               append($$anchor4, div_13);
@@ -7777,105 +7965,152 @@ function ReviewModal($$anchor, $$props) {
           append($$anchor3, fragment_3);
         };
         var alternate_3 = ($$anchor3) => {
-          var div_15 = root_62();
+          var div_15 = root_82();
+          var div_16 = sibling(child(div_15), 2);
+          var node_8 = sibling(child(div_16), 2);
+          {
+            var consequent_6 = ($$anchor4) => {
+              var div_17 = root_72();
+              var button_6 = child(div_17);
+              var text_7 = only_child(button_6, true);
+              reset(div_17);
+              template_effect(() => {
+                button_6.disabled = get(isAnalyzingSingle) || isScanning();
+                set_text(text_7, get(isAnalyzingSingle) ? "\u23F3 \u0410\u043D\u0430\u043B\u0438\u0437 \u0432 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u0435..." : "\u26A1 \u0421\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043F\u043B\u0430\u043D \u0447\u0435\u0440\u0435\u0437 Gemini");
+              });
+              event("click", button_6, handleAnalyzeSingle);
+              append($$anchor4, div_17);
+            };
+            if_block(node_8, ($$render) => {
+              if (onAnalyzeCluster()) $$render(consequent_6);
+            });
+          }
+          reset(div_16);
+          reset(div_15);
           append($$anchor3, div_15);
         };
         if_block(node_5, ($$render) => {
-          if (get(selectedPlan)) $$render(consequent_4);
+          if (get(selectedPlan)) $$render(consequent_5);
           else $$render(alternate_3, -1);
         });
       }
-      var div_16 = sibling(node_5, 2);
-      var input = sibling(child(div_16), 2);
-      remove_input_defaults(input);
-      reset(div_16);
-      var div_17 = sibling(div_16, 2);
-      var button_5 = child(div_17);
-      var text_6 = only_child(button_5);
-      var button_6 = sibling(button_5, 2);
-      reset(div_17);
-      reset(div_11);
-      var div_18 = sibling(div_11, 2);
-      var node_7 = child(div_18);
+      var node_9 = sibling(node_5, 2);
       {
-        var consequent_6 = ($$anchor3) => {
-          var div_19 = root_82();
-          var node_8 = child(div_19);
-          {
-            var consequent_5 = ($$anchor4) => {
-              var fragment_4 = comment();
-              var node_9 = first_child(fragment_4);
-              each(
-                node_9,
-                1,
-                () => (get(selectedPlan), untrack(() => get(selectedPlan).modifications)),
-                index,
-                ($$anchor5, modification) => {
-                  {
-                    let $0 = derived_safe_equal(() => (get(selectedCluster), get(modification), untrack(() => get(selectedCluster).chunks.find((c) => c.filePath === get(modification).filePath)?.breadcrumbs || "")));
-                    DiffCard($$anchor5, {
-                      get modification() {
-                        return get(modification);
-                      },
-                      get breadcrumbs() {
-                        return get($0);
-                      }
-                    });
-                  }
-                }
-              );
-              append($$anchor4, fragment_4);
-            };
-            var alternate_4 = ($$anchor4) => {
-              var div_20 = root_72();
-              append($$anchor4, div_20);
-            };
-            if_block(node_8, ($$render) => {
-              if (get(selectedPlan), untrack(() => get(selectedPlan)?.modifications && get(selectedPlan).modifications.length > 0)) $$render(consequent_5);
-              else $$render(alternate_4, -1);
-            });
-          }
+        var consequent_7 = ($$anchor3) => {
+          var fragment_4 = root_9();
+          var div_18 = first_child(fragment_4);
+          var input = sibling(child(div_18), 2);
+          remove_input_defaults(input);
+          reset(div_18);
+          var div_19 = sibling(div_18, 2);
+          var button_7 = child(div_19);
+          var text_8 = only_child(button_7);
+          var button_8 = sibling(button_7, 2);
           reset(div_19);
-          append($$anchor3, div_19);
+          template_effect(() => {
+            set_class(button_7, 1, `tab-btn ${get(activeTab) === "modifications" ? "active" : ""}`, "svelte-71f0fw");
+            set_text(text_8, `\u270F\uFE0F \u0417\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 (${(get(selectedPlan), untrack(() => get(selectedPlan)?.modifications?.length || 0)) ?? ""})`);
+            set_class(button_8, 1, `tab-btn ${get(activeTab) === "notePreview" ? "active" : ""}`, "svelte-71f0fw");
+          });
+          bind_value(input, () => get(selectedPlan).conceptTitle, ($$value) => mutate(selectedPlan, get(selectedPlan).conceptTitle = $$value));
+          event("click", button_7, () => set(activeTab, "modifications"));
+          event("click", button_8, () => set(activeTab, "notePreview"));
+          append($$anchor3, fragment_4);
         };
-        var alternate_5 = ($$anchor3) => {
-          var div_21 = root_9();
-          var textarea = sibling(child(div_21), 2);
-          remove_textarea_child(textarea);
-          reset(div_21);
-          bind_value(textarea, () => get(selectedPlan).canonicalNoteMarkdown, ($$value) => mutate(selectedPlan, get(selectedPlan).canonicalNoteMarkdown = $$value));
-          append($$anchor3, div_21);
-        };
-        if_block(node_7, ($$render) => {
-          if (get(activeTab) === "modifications") $$render(consequent_6);
-          else $$render(alternate_5, -1);
+        if_block(node_9, ($$render) => {
+          if (get(selectedPlan)) $$render(consequent_7);
         });
       }
-      reset(div_18);
-      var div_22 = sibling(div_18, 2);
-      var button_7 = child(div_22);
-      var button_8 = sibling(button_7, 4);
-      reset(div_22);
+      reset(div_11);
+      var node_10 = sibling(div_11, 2);
+      {
+        var consequent_10 = ($$anchor3) => {
+          var div_20 = root_132();
+          var node_11 = child(div_20);
+          {
+            var consequent_9 = ($$anchor4) => {
+              var div_21 = root_11();
+              var node_12 = child(div_21);
+              {
+                var consequent_8 = ($$anchor5) => {
+                  var fragment_5 = comment();
+                  var node_13 = first_child(fragment_5);
+                  each(
+                    node_13,
+                    1,
+                    () => (get(selectedPlan), untrack(() => get(selectedPlan).modifications)),
+                    index,
+                    ($$anchor6, modification) => {
+                      {
+                        let $0 = derived_safe_equal(() => (get(selectedCluster), get(modification), untrack(() => get(selectedCluster).chunks.find((c) => c.filePath === get(modification).filePath)?.breadcrumbs || "")));
+                        DiffCard($$anchor6, {
+                          get modification() {
+                            return get(modification);
+                          },
+                          get breadcrumbs() {
+                            return get($0);
+                          }
+                        });
+                      }
+                    }
+                  );
+                  append($$anchor5, fragment_5);
+                };
+                var alternate_4 = ($$anchor5) => {
+                  var div_22 = root_10();
+                  append($$anchor5, div_22);
+                };
+                if_block(node_12, ($$render) => {
+                  if (get(selectedPlan), untrack(() => get(selectedPlan)?.modifications && get(selectedPlan).modifications.length > 0)) $$render(consequent_8);
+                  else $$render(alternate_4, -1);
+                });
+              }
+              reset(div_21);
+              append($$anchor4, div_21);
+            };
+            var alternate_5 = ($$anchor4) => {
+              var div_23 = root_122();
+              var textarea = sibling(child(div_23), 2);
+              remove_textarea_child(textarea);
+              reset(div_23);
+              bind_value(textarea, () => get(selectedPlan).canonicalNoteMarkdown, ($$value) => mutate(selectedPlan, get(selectedPlan).canonicalNoteMarkdown = $$value));
+              append($$anchor4, div_23);
+            };
+            if_block(node_11, ($$render) => {
+              if (get(activeTab) === "modifications") $$render(consequent_9);
+              else $$render(alternate_5, -1);
+            });
+          }
+          reset(div_20);
+          append($$anchor3, div_20);
+        };
+        var alternate_6 = ($$anchor3) => {
+          var div_24 = root_142();
+          append($$anchor3, div_24);
+        };
+        if_block(node_10, ($$render) => {
+          if (get(selectedPlan)) $$render(consequent_10);
+          else $$render(alternate_6, -1);
+        });
+      }
+      var div_25 = sibling(node_10, 2);
+      var button_9 = child(div_25);
+      var button_10 = sibling(button_9, 4);
+      reset(div_25);
       reset(div_9);
       template_effect(() => {
         set_text(text_3, `\u2190 \u041A \u0441\u043F\u0438\u0441\u043A\u0443 (${(deep_read_state(clusters()), untrack(() => clusters().length)) ?? ""})`);
         set_text(text_4, (get(selectedPlan), untrack(() => get(selectedPlan)?.conceptTitle || "\u0414\u0435\u0442\u0430\u043B\u0438 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430")));
-        set_class(button_5, 1, `tab-btn ${get(activeTab) === "modifications" ? "active" : ""}`, "svelte-71f0fw");
-        set_text(text_6, `\u270F\uFE0F \u0417\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 (${(get(selectedPlan), untrack(() => get(selectedPlan)?.modifications?.length || 0)) ?? ""})`);
-        set_class(button_6, 1, `tab-btn ${get(activeTab) === "notePreview" ? "active" : ""}`, "svelte-71f0fw");
-        button_8.disabled = (get(selectedPlan), untrack(() => !get(selectedPlan) || !get(selectedPlan).isDuplicate));
+        button_10.disabled = (get(selectedPlan), untrack(() => !get(selectedPlan) || !get(selectedPlan).isDuplicate && !get(selectedPlan).conceptTitle));
       });
       event("click", button_4, () => set(activeViewMode, "list"));
-      bind_value(input, () => get(selectedPlan).conceptTitle, ($$value) => mutate(selectedPlan, get(selectedPlan).conceptTitle = $$value));
-      event("click", button_5, () => set(activeTab, "modifications"));
-      event("click", button_6, () => set(activeTab, "notePreview"));
-      event("click", button_7, () => onRejectCluster()(get(selectedCluster).id));
-      event("click", button_8, handleApply);
+      event("click", button_9, () => onRejectCluster()(get(selectedCluster).id));
+      event("click", button_10, handleApply);
       append($$anchor2, div_9);
     };
     if_block(node_4, ($$render) => {
       if (!get(selectedCluster)) $$render(consequent_2);
-      else $$render(alternate_6, -1);
+      else $$render(alternate_7, -1);
     });
   }
   reset(main);
@@ -7900,7 +8135,10 @@ function ReviewModal($$anchor, $$props) {
   });
   event("click", button_2, handleUndo);
   append($$anchor, div);
-  pop();
+  bind_prop($$props, "updateState", updateState);
+  var $$pop = pop($$exports);
+  $$cleanup();
+  return $$pop;
 }
 
 // src/ui/RefactorView.ts
@@ -7911,6 +8149,7 @@ var RefactorView = class extends import_obsidian2.ItemView {
     this.plugin = plugin;
   }
   component = null;
+  store;
   getViewType() {
     return VIEW_TYPE_REFACTOR;
   }
@@ -7923,10 +8162,16 @@ var RefactorView = class extends import_obsidian2.ItemView {
   async onOpen() {
     const container = this.contentEl;
     container.empty();
+    this.store = writable({
+      clusters: [...this.plugin.candidateClusters],
+      plans: { ...this.plugin.refactorPlans },
+      isScanning: this.plugin.isScanning
+    });
     const props = {
       plugin: this.plugin,
-      clusters: this.plugin.candidateClusters,
-      plans: this.plugin.refactorPlans,
+      store: this.store,
+      clusters: [...this.plugin.candidateClusters],
+      plans: { ...this.plugin.refactorPlans },
       isScanning: this.plugin.isScanning,
       logger: this.plugin.logger,
       onCancelScan: () => {
@@ -7939,6 +8184,10 @@ var RefactorView = class extends import_obsidian2.ItemView {
       },
       onScanActiveNote: async () => {
         await this.plugin.scanActiveNote();
+        this.updateProps();
+      },
+      onAnalyzeCluster: async (cluster) => {
+        await this.plugin.analyzeCluster(cluster);
         this.updateProps();
       },
       onApplyPlan: async (cluster, plan) => {
@@ -7967,14 +8216,28 @@ var RefactorView = class extends import_obsidian2.ItemView {
     }
   }
   updateProps() {
-    if (!this.component) return;
     const newProps = {
       clusters: [...this.plugin.candidateClusters],
       plans: { ...this.plugin.refactorPlans },
       isScanning: this.plugin.isScanning,
       logger: this.plugin.logger
     };
-    if (typeof this.component.$set === "function") {
+    if (this.store) {
+      this.store.set({
+        clusters: newProps.clusters,
+        plans: newProps.plans,
+        isScanning: newProps.isScanning
+      });
+    }
+    if (!this.component) return;
+    if (typeof this.component.updateState === "function") {
+      this.component.updateState(
+        newProps.clusters,
+        newProps.plans,
+        newProps.isScanning,
+        newProps.logger
+      );
+    } else if (typeof this.component.$set === "function") {
       this.component.$set(newProps);
     } else {
       Object.assign(this.component, newProps);
@@ -10074,6 +10337,32 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
       this.candidateClusters = this.candidateClusters.filter((c) => c.id !== cluster.id);
       delete this.refactorPlans[cluster.id];
       this.notifyViews();
+    }
+  }
+  /**
+   * Evaluates a single cluster on demand (e.g. if skipped or failed earlier due to rate limit).
+   */
+  async analyzeCluster(cluster) {
+    if (!this.settings.geminiApiKey) {
+      new import_obsidian5.Notice("\u0423\u043A\u0430\u0436\u0438\u0442\u0435 Gemini API-\u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445 \u043F\u043B\u0430\u0433\u0438\u043D\u0430.");
+      return null;
+    }
+    try {
+      this.logger.info(`\u0417\u0430\u043F\u0443\u0441\u043A \u0442\u043E\u0447\u0435\u0447\u043D\u043E\u0433\u043E AI-\u0430\u043D\u0430\u043B\u0438\u0437\u0430 \u0434\u043B\u044F \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430...`);
+      const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
+      this.refactorPlans[cluster.id] = plan;
+      if (plan.isDuplicate) {
+        this.logger.success(`\u041A\u043E\u043D\u0446\u0435\u043F\u0442 "${plan.conceptTitle}" \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D AI.`);
+      } else {
+        this.logger.info(`[\u041E\u0442\u043A\u043B\u043E\u043D\u0435\u043D] \u041A\u043E\u043D\u0446\u0435\u043F\u0442: ${plan.rejectionReason || "\u041D\u0435\u0442 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F"}.`);
+      }
+      this.notifyViews();
+      return plan;
+    } catch (err) {
+      console.error("Single cluster analysis error:", err);
+      this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 AI \u043F\u0440\u0438 \u0430\u043D\u0430\u043B\u0438\u0437\u0435 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430: ${err?.message || err}`);
+      new import_obsidian5.Notice(`\u041E\u0448\u0438\u0431\u043A\u0430 AI: ${err?.message || err}`);
+      return null;
     }
   }
   rejectCluster(clusterId) {

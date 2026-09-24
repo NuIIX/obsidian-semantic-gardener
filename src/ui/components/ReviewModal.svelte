@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import type { Writable } from "svelte/store";
   import type {
     CandidateCluster,
     RefactorPlan,
@@ -11,7 +12,8 @@
   import LogPanel from "./LogPanel.svelte";
   import type { LoggerService } from "../../core/logger";
 
-  export let plugin: any;
+  export let plugin: any = undefined;
+  export let store: Writable<any> | undefined = undefined;
   export let clusters: CandidateCluster[] = [];
   export let plans: Record<string, RefactorPlan> = {};
   export let isScanning: boolean = false;
@@ -19,6 +21,7 @@
   export let onCancelScan: (() => void) | undefined = undefined;
   export let onScanVault: () => Promise<void>;
   export let onScanActiveNote: () => Promise<void>;
+  export let onAnalyzeCluster: ((cluster: CandidateCluster) => Promise<any>) | undefined = undefined;
   export let onApplyPlan: (
     cluster: CandidateCluster,
     plan: RefactorPlan,
@@ -30,6 +33,27 @@
   let activeTab: "modifications" | "notePreview" = "modifications";
   let historyCount = 0;
   let activeViewMode: "list" | "detail" = "list";
+  let isAnalyzingSingle = false;
+
+  // Reactively consume store if provided
+  $: if (store && $store) {
+    if ($store.clusters) clusters = $store.clusters;
+    if ($store.plans) plans = $store.plans;
+    if ($store.isScanning !== undefined) isScanning = $store.isScanning;
+  }
+
+  export function updateState(
+    newClusters: CandidateCluster[],
+    newPlans: Record<string, RefactorPlan>,
+    newIsScanning: boolean,
+    newLogger?: LoggerService
+  ) {
+    clusters = [...newClusters];
+    plans = { ...newPlans };
+    isScanning = newIsScanning;
+    if (newLogger) logger = newLogger;
+    updateHistoryCount();
+  }
 
   $: selectedCluster =
     clusters.find((c) => c.id === selectedClusterId) ||
@@ -53,7 +77,24 @@
 
   onMount(() => {
     updateHistoryCount();
+    if (plugin) {
+      if ((!clusters || clusters.length === 0) && plugin.candidateClusters?.length > 0) {
+        clusters = [...plugin.candidateClusters];
+        plans = { ...plugin.refactorPlans };
+        isScanning = plugin.isScanning;
+      }
+    }
   });
+
+  async function handleAnalyzeSingle() {
+    if (!selectedCluster || !onAnalyzeCluster) return;
+    isAnalyzingSingle = true;
+    try {
+      await onAnalyzeCluster(selectedCluster);
+    } finally {
+      isAnalyzingSingle = false;
+    }
+  }
 
   async function handleApply() {
     if (!selectedCluster || !selectedPlan) return;
@@ -195,86 +236,117 @@
                       {selectedPlan.rejectionReason ||
                         "Разные предметные области или контекст."}
                     </div>
+                    {#if onAnalyzeCluster}
+                      <button
+                        class="sg-btn sg-btn-sm"
+                        style="margin-top: 8px;"
+                        on:click={handleAnalyzeSingle}
+                        disabled={isAnalyzingSingle || isScanning}
+                      >
+                        {isAnalyzingSingle ? "⏳ Анализ..." : "🔄 Перепроверить в Gemini"}
+                      </button>
+                    {/if}
                   </div>
                 {/if}
               {:else}
                 <div class="gatekeeper-banner pending">
                   <span class="banner-icon">⏳</span>
-                  <div>
-                    <strong>Анализ в процессе:</strong> Отправка кандидатов в Gemini...
+                  <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                    <div>
+                      <strong>План еще не сформирован:</strong> Векторное сходство обнаружено, концепт готов к анализу.
+                    </div>
+                    {#if onAnalyzeCluster}
+                      <div>
+                        <button
+                          class="sg-btn sg-btn-primary sg-btn-sm"
+                          on:click={handleAnalyzeSingle}
+                          disabled={isAnalyzingSingle || isScanning}
+                        >
+                          {isAnalyzingSingle ? "⏳ Анализ в процессе..." : "⚡ Сформировать план через Gemini"}
+                        </button>
+                      </div>
+                    {/if}
                   </div>
                 </div>
               {/if}
 
               <!-- Editable Concept Title -->
-              <div class="concept-title-row">
-                <label for="concept-title-input" class="concept-label"
-                  >Название канонической заметки:</label
-                >
-                <input
-                  id="concept-title-input"
-                  type="text"
-                  class="concept-title-input"
-                  bind:value={selectedPlan.conceptTitle}
-                  placeholder="Например: Закон Литтла"
-                />
-              </div>
-
-              <!-- Tab switcher for Atomic Note vs Modifications -->
-              <div class="tab-bar">
-                <button
-                  class="tab-btn {activeTab === 'modifications' ? 'active' : ''}"
-                  on:click={() => (activeTab = "modifications")}
-                >
-                  ✏️ Замены в файлах ({selectedPlan?.modifications?.length || 0})
-                </button>
-                <button
-                  class="tab-btn {activeTab === 'notePreview' ? 'active' : ''}"
-                  on:click={() => (activeTab = "notePreview")}
-                >
-                  📝 Текст новой заметки
-                </button>
-              </div>
-            </div>
-
-            <!-- Tab Content -->
-            <div class="tab-content">
-              {#if activeTab === "modifications"}
-                <div class="modifications-list">
-                  {#if selectedPlan?.modifications && selectedPlan.modifications.length > 0}
-                    {#each selectedPlan.modifications as modification, idx (idx)}
-                      <DiffCard
-                        {modification}
-                        breadcrumbs={selectedCluster.chunks.find(
-                          (c) => c.filePath === modification.filePath,
-                        )?.breadcrumbs || ""}
-                      />
-                    {/each}
-                  {:else}
-                    <div class="no-mods">
-                      <p>
-                        Для данного кластера нет предложенных правок (или кластер
-                        был отклонен Gatekeeper).
-                      </p>
-                    </div>
-                  {/if}
-                </div>
-              {:else}
-                <!-- Atomic Note Preview & Editing -->
-                <div class="note-preview-pane">
-                  <label for="atomic-note-textarea" class="concept-label"
-                    >Содержимое новой атомарной заметки (Markdown):</label
+              {#if selectedPlan}
+                <div class="concept-title-row">
+                  <label for="concept-title-input" class="concept-label"
+                    >Название канонической заметки:</label
                   >
-                  <textarea
-                    id="atomic-note-textarea"
-                    class="atomic-note-editor"
-                    rows="12"
-                    bind:value={selectedPlan.canonicalNoteMarkdown}
-                    placeholder="# Определение&#10;&#10;Текст новой атомарной заметки..."
-                  ></textarea>
+                  <input
+                    id="concept-title-input"
+                    type="text"
+                    class="concept-title-input"
+                    bind:value={selectedPlan.conceptTitle}
+                    placeholder="Например: Закон Литтла"
+                  />
+                </div>
+
+                <!-- Tab switcher for Atomic Note vs Modifications -->
+                <div class="tab-bar">
+                  <button
+                    class="tab-btn {activeTab === 'modifications' ? 'active' : ''}"
+                    on:click={() => (activeTab = "modifications")}
+                  >
+                    ✏️ Замены в файлах ({selectedPlan?.modifications?.length || 0})
+                  </button>
+                  <button
+                    class="tab-btn {activeTab === 'notePreview' ? 'active' : ''}"
+                    on:click={() => (activeTab = "notePreview")}
+                  >
+                    📝 Текст новой заметки
+                  </button>
                 </div>
               {/if}
             </div>
+
+            <!-- Tab Content -->
+            {#if selectedPlan}
+              <div class="tab-content">
+                {#if activeTab === "modifications"}
+                  <div class="modifications-list">
+                    {#if selectedPlan?.modifications && selectedPlan.modifications.length > 0}
+                      {#each selectedPlan.modifications as modification, idx (idx)}
+                        <DiffCard
+                          {modification}
+                          breadcrumbs={selectedCluster.chunks.find(
+                            (c) => c.filePath === modification.filePath,
+                          )?.breadcrumbs || ""}
+                        />
+                      {/each}
+                    {:else}
+                      <div class="no-mods">
+                        <p>
+                          Для данного кластера нет предложенных правок (или кластер
+                          был отклонен Gatekeeper).
+                        </p>
+                      </div>
+                    {/if}
+                  </div>
+                {:else}
+                  <!-- Atomic Note Preview & Editing -->
+                  <div class="note-preview-pane">
+                    <label for="atomic-note-textarea" class="concept-label"
+                      >Содержимое новой атомарной заметки (Markdown):</label
+                    >
+                    <textarea
+                      id="atomic-note-textarea"
+                      class="atomic-note-editor"
+                      rows="12"
+                      bind:value={selectedPlan.canonicalNoteMarkdown}
+                      placeholder="# Определение&#10;&#10;Текст новой атомарной заметки..."
+                    ></textarea>
+                  </div>
+                {/if}
+              </div>
+            {:else}
+              <div class="no-mods" style="padding: 32px 16px; text-align: center;">
+                <p>Нажмите <strong>«⚡ Сформировать план через Gemini»</strong> выше, чтобы сгенерировать определение концепта и микрохирургические вставки.</p>
+              </div>
+            {/if}
 
             <!-- Bottom Action Controls -->
             <div class="concept-footer-actions">
@@ -291,7 +363,7 @@
               <button
                 class="sg-btn sg-btn-primary sg-btn-large"
                 on:click={handleApply}
-                disabled={!selectedPlan || !selectedPlan.isDuplicate}
+                disabled={!selectedPlan || (!selectedPlan.isDuplicate && !selectedPlan.conceptTitle)}
                 title="Создать заметку и применить выбранные замены в файлах с записью в журнал истории"
               >
                 🚀 Применить рефакторинг

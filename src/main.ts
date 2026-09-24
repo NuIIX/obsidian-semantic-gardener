@@ -550,6 +550,33 @@ export default class SemanticGardenerPlugin extends Plugin {
     }
   }
 
+  /**
+   * Evaluates a single cluster on demand (e.g. if skipped or failed earlier due to rate limit).
+   */
+  async analyzeCluster(cluster: CandidateCluster): Promise<RefactorPlan | null> {
+    if (!this.settings.geminiApiKey) {
+      new Notice('Укажите Gemini API-ключ в настройках плагина.');
+      return null;
+    }
+    try {
+      this.logger.info(`Запуск точечного AI-анализа для концепта...`);
+      const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
+      this.refactorPlans[cluster.id] = plan;
+      if (plan.isDuplicate) {
+        this.logger.success(`Концепт "${plan.conceptTitle}" успешно подтвержден AI.`);
+      } else {
+        this.logger.info(`[Отклонен] Концепт: ${plan.rejectionReason || 'Нет дублирования'}.`);
+      }
+      this.notifyViews();
+      return plan;
+    } catch (err: any) {
+      console.error('Single cluster analysis error:', err);
+      this.logger.error(`Ошибка AI при анализе концепта: ${err?.message || err}`);
+      new Notice(`Ошибка AI: ${err?.message || err}`);
+      return null;
+    }
+  }
+
   rejectCluster(clusterId: string): void {
     this.candidateClusters = this.candidateClusters.filter(c => c.id !== clusterId);
     delete this.refactorPlans[clusterId];
