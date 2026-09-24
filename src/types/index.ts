@@ -14,6 +14,7 @@ export interface CandidateCluster {
   id: string;
   similarity: number;
   chunks: SemanticChunk[];
+  domain?: string;
 }
 
 export type ModificationMode = 'inline' | 'transclusion' | 'skip';
@@ -32,6 +33,7 @@ export interface RefactorPlan {
   isDuplicate: boolean;
   rejectionReason?: string;
   conceptTitle?: string;
+  aliases?: string[];
   canonicalNoteMarkdown?: string;
   modifications: RefactorModification[];
 }

@@ -10,7 +10,7 @@ import { GeminiClient } from './ai/gemini-client';
 import { WorkerClient } from './ai/worker-client';
 import { chunkMarkdown } from './core/chunker';
 import { findCandidateClusters, findClustersForNote } from './ai/vector-search';
-import { getMarkdownFiles, ensureFolderExists, sanitizeNoteTitle } from './utils/vault-mutator';
+import { getMarkdownFiles, ensureFolderExists, sanitizeNoteTitle, ensureFrontmatterAliases } from './utils/vault-mutator';
 import { LoggerService } from './core/logger';
 
 export default class SemanticGardenerPlugin extends Plugin {
@@ -553,7 +553,8 @@ export default class SemanticGardenerPlugin extends Plugin {
     await ensureFolderExists(this.app, targetFolder);
     const newNotePath = `${targetFolder}/${safeTitle}.md`;
 
-    const noteContent = plan.canonicalNoteMarkdown || `# ${safeTitle}\n\nОпределение концепции...`;
+    const rawContent = plan.canonicalNoteMarkdown || `# ${safeTitle}\n\nОпределение концепции...`;
+    const noteContent = ensureFrontmatterAliases(rawContent, plan.aliases);
 
     const mutations: MutationRequest[] = [];
     for (const mod of plan.modifications) {

@@ -13,13 +13,14 @@ const SYSTEM_INSTRUCTION = `Ты — строгий редактор персо�
 ПРАВИЛО МИКРОХИРУРГИИ СТИЛЯ (Surgical Span Replacer Mode):
 - Если isDuplicate: true:
   1. Сформулируй емкое "conceptTitle" для новой атомарной заметки (без недопустимых символов: / \\ * ? : " < > |).
-  2. Напиши "canonicalNoteMarkdown": качественное, самодостаточное определение концепции, ключевые тезисы или формулы в Markdown.
-  3. Для КАЖДОГО фрагмента найди МИНИМАЛЬНЫЙ точный сегмент текста ("originalSpan"), который непосредственно выражает дублируемое определение.
+  2. Определи "aliases": массив синонимов, аббревиатур, падежных форм или альтернативных названий для этой концепции (например: ["WIP limit", "Лимит незавершенного производства"]).
+  3. Напиши "canonicalNoteMarkdown": качественное, самодостаточное определение концепции, ключевые тезисы или формулы в Markdown.
+  4. Для КАЖДОГО фрагмента найди МИНИМАЛЬНЫЙ точный сегмент текста ("originalSpan"), который непосредственно выражает дублируемое определение.
      ВНИМАНИЕ: "originalSpan" ДОЛЖЕН СТРОГО, СИМВОЛ В СИМВОЛ, присутствовать в исходном тексте фрагмента!
-  4. Составь "suggestedInlineSpan": микрохирургическая замена оригинального сегмента. ЗАПРЕЩЕНО переписывать весь абзац! Сохраняй авторский синтаксис, пунктуацию, сленг и грамматику, встраивая [[conceptTitle]] или [[conceptTitle|алиас]].
-  5. Составь "transclusionSpan": альтернативный вариант замены на трансклюзию вида ![[conceptTitle]].
+  5. Составь "suggestedInlineSpan": микрохирургическая замена оригинального сегмента. ЗАПРЕЩЕНО переписывать весь абзац! Сохраняй авторский синтаксис, пунктуацию, сленг и грамматику. Если форма слова в предложении отличается от conceptTitle, используй [[conceptTitle|контекстный алиас]] (например: "в соответствии с [[Лимит WIP|лимитом WIP]]").
+  6. Составь "transclusionSpan": альтернативный вариант замены на трансклюзию вида ![[conceptTitle]].
 - Если isDuplicate: false:
-  Поля conceptTitle, canonicalNoteMarkdown и modifications должны отсутствовать или быть пустыми.`;
+  Поля conceptTitle, aliases, canonicalNoteMarkdown и modifications должны отсутствовать или быть пустыми.`;
 
 export interface KeyRotationInfo {
   index: number;
@@ -377,12 +378,19 @@ ${chunk.text}
       }
     }
 
+    const rawAliases = Array.isArray(parsed.aliases) ? parsed.aliases : [];
+    const aliases = rawAliases
+      .filter((a: any) => typeof a === 'string' && a.trim().length > 0)
+      .map((a: string) => a.trim().replace(/[:/\\*?"<>|]/g, ''));
+    const uniqueAliases = Array.from(new Set(aliases));
+
     return {
       id: `plan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       clusterId: cluster.id,
       isDuplicate: parsed.isDuplicate,
       rejectionReason: parsed.isDuplicate ? '' : parsed.rejectionReason,
       conceptTitle: parsed.conceptTitle?.replace(/[:/\\*?"<>|]/g, '').trim(),
+      aliases: uniqueAliases.length > 0 ? uniqueAliases : undefined,
       canonicalNoteMarkdown: parsed.canonicalNoteMarkdown,
       modifications
     };

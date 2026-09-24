@@ -9,6 +9,11 @@ export const refactorEngineSchema = {
       type: "STRING", 
       description: "Concise canonical title for the atomic note. If isDuplicate is false, leave empty." 
     },
+    aliases: {
+      type: "ARRAY",
+      description: "Synonyms, acronyms, or inflected forms for YAML aliases frontmatter (e.g. ['WIP limit', 'лимит WIP']).",
+      items: { type: "STRING" }
+    },
     canonicalNoteMarkdown: { 
       type: "STRING", 
       description: "Comprehensive atomic note body in Markdown. If isDuplicate is false, leave empty." 
@@ -51,6 +56,7 @@ export interface GeminiRefactorResponse {
   isDuplicate: boolean;
   rejectionReason?: string;
   conceptTitle?: string;
+  aliases?: string[];
   canonicalNoteMarkdown?: string;
   modifications?: Array<{
     filePath: string;

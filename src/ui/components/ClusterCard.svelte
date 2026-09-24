@@ -27,7 +27,12 @@
   </div>
 
   <div class="cluster-meta">
-    <span class="files-badge">📁 {fileNames.length} {fileNames.length === 1 ? 'файл' : fileNames.length < 5 ? 'файла' : 'файлов'}</span>
+    {#if cluster.domain}
+      <span class="domain-badge" title="Домен / папка">
+        {cluster.domain === 'Cross-folder' ? '🌐 Межпапочный' : `📁 ${cluster.domain}`}
+      </span>
+    {/if}
+    <span class="files-badge">{fileNames.length} {fileNames.length === 1 ? 'файл' : fileNames.length < 5 ? 'файла' : 'файлов'}</span>
     
     {#if plan}
       {#if plan.isDuplicate}
@@ -124,6 +129,15 @@
 
   .files-badge {
     color: var(--text-muted);
+  }
+
+  .domain-badge {
+    padding: 1px 6px;
+    border-radius: 4px;
+    background-color: var(--background-modifier-border);
+    color: var(--text-muted);
+    font-size: 0.9em;
+    font-weight: 500;
   }
 
   .status-badge {

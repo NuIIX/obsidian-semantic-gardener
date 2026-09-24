@@ -45,12 +45,16 @@
 
   let searchQuery = "";
   let activeFilterTab: "all" | "approved" | "rejected" | "pending" = "all";
+  let selectedDomainFilter: string = "all";
+  let aliasesInput = "";
 
   let diffModalOpen = false;
   let diffFilePathA = "";
   let diffFilePathB = "";
   let diffContentA = "";
   let diffContentB = "";
+
+  $: availableDomains = Array.from(new Set(clusters.map(c => c.domain || '(Root)'))).filter(Boolean).sort();
 
   $: approvedCount = clusters.filter(c => plans[c.id]?.isDuplicate).length;
   $: rejectedCount = clusters.filter(c => plans[c.id] && !plans[c.id].isDuplicate).length;
@@ -62,15 +66,35 @@
     if (activeFilterTab === "rejected" && (!plan || plan.isDuplicate)) return false;
     if (activeFilterTab === "pending" && plan !== undefined) return false;
 
+    if (selectedDomainFilter !== "all" && (cluster.domain || '(Root)') !== selectedDomainFilter) {
+      return false;
+    }
+
     if (searchQuery.trim().length > 0) {
       const q = searchQuery.toLowerCase();
       const matchesTitle = plan?.conceptTitle?.toLowerCase().includes(q) || false;
       const matchesFile = cluster.chunks.some(c => c.filePath.toLowerCase().includes(q));
       const matchesBreadcrumbs = cluster.chunks.some(c => c.breadcrumbs.toLowerCase().includes(q));
-      return matchesTitle || matchesFile || matchesBreadcrumbs;
+      const matchesAliases = plan?.aliases?.some(a => a.toLowerCase().includes(q)) || false;
+      return matchesTitle || matchesFile || matchesBreadcrumbs || matchesAliases;
     }
     return true;
   });
+
+  $: if (selectedPlan) {
+    aliasesInput = (selectedPlan.aliases || []).join(', ');
+  } else {
+    aliasesInput = "";
+  }
+
+  function handleAliasesChange() {
+    if (!selectedPlan) return;
+    const list = aliasesInput
+      .split(',')
+      .map(s => s.trim().replace(/[:/\\*?"<>|#^[\]]/g, ''))
+      .filter(s => s.length > 0);
+    selectedPlan.aliases = list.length > 0 ? list : undefined;
+  }
 
   $: clusterDistinctFiles = selectedCluster
     ? Array.from(new Set(selectedCluster.chunks.map((c) => c.filePath)))
@@ -281,6 +305,19 @@
             {/if}
           </div>
 
+          {#if availableDomains.length > 1}
+            <div class="domain-filter-box">
+              <select class="domain-select" bind:value={selectedDomainFilter}>
+                <option value="all">📁 Все папки ({clusters.length})</option>
+                {#each availableDomains as d}
+                  <option value={d}>
+                    {d === 'Cross-folder' ? '🌐 Межпапочные' : `📁 ${d}`} ({clusters.filter(c => (c.domain || '(Root)') === d).length})
+                  </option>
+                {/each}
+              </select>
+            </div>
+          {/if}
+
           <div class="filter-chips">
             <button
               type="button"
@@ -463,6 +500,20 @@
                     class="concept-title-input"
                     bind:value={selectedPlan.conceptTitle}
                     placeholder="Например: Закон Литтла"
+                  />
+                </div>
+
+                <div class="concept-aliases-row">
+                  <label for="concept-aliases-input" class="concept-label"
+                    >YAML Алиасы (синонимы):</label
+                  >
+                  <input
+                    id="concept-aliases-input"
+                    type="text"
+                    class="concept-aliases-input"
+                    bind:value={aliasesInput}
+                    on:input={handleAliasesChange}
+                    placeholder="Через запятую: WIP limit, Лимит незавершенного производства"
                   />
                 </div>
 
@@ -831,6 +882,26 @@
     color: var(--text-normal);
   }
 
+  .domain-filter-box {
+    width: 100%;
+  }
+
+  .domain-select {
+    width: 100%;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 0.8em;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .domain-select:focus {
+    border-color: var(--interactive-accent);
+  }
+
   .filter-chips {
     display: flex;
     gap: 4px;
@@ -1018,6 +1089,28 @@
   }
 
   .concept-title-input:focus {
+    border-color: var(--interactive-accent);
+    outline: none;
+  }
+
+  .concept-aliases-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .concept-aliases-input {
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 0.88em;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-secondary);
+    color: var(--text-normal);
+  }
+
+  .concept-aliases-input:focus {
     border-color: var(--interactive-accent);
     outline: none;
   }

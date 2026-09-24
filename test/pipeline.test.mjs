@@ -3,7 +3,15 @@ import assert from 'node:assert';
 import { parseMarkdown } from '../src/core/parser.ts';
 import { chunkMarkdown } from '../src/core/chunker.ts';
 import { sha256 } from '../src/core/hasher.ts';
-import { cosineSimilarity, findCandidateClusters } from '../src/ai/vector-search.ts';
+import { 
+  cosineSimilarity, 
+  findCandidateClusters, 
+  normalizeVector, 
+  dotProduct, 
+  FlatVectorMatrix, 
+  getDomainFromPath, 
+  findClustersForNote 
+} from '../src/ai/vector-search.ts';
 import { diffWordsUnicode } from '../src/utils/diff-helper.ts';
 import { refactorEngineSchema } from '../src/types/llm-schema.ts';
 
@@ -155,11 +163,70 @@ test('vector-search: clusters duplicate candidates across distinct files only', 
   assert.strictEqual(clusters.length, 1);
   const cluster = clusters[0];
   assert.ok(cluster.similarity >= 0.82);
+  assert.strictEqual(cluster.domain, '(Root)');
 
   const filePaths = cluster.chunks.map(c => c.filePath);
   assert.ok(filePaths.includes('Book A.md'));
   assert.ok(filePaths.includes('Book B.md'));
   assert.ok(!filePaths.includes('Cooking/Recipe.md'));
+});
+
+test('vector-search: FlatVectorMatrix and dotProduct match cosine similarity', () => {
+  const vec1 = new Float32Array([3, 4, 0]);
+  const norm1 = normalizeVector(vec1);
+  assert.ok(Math.abs(norm1[0] - 0.6) < 0.001);
+  assert.ok(Math.abs(norm1[1] - 0.8) < 0.001);
+
+  const vec2 = new Float32Array([1, 0, 0]);
+  const norm2 = normalizeVector(vec2);
+  const dot = dotProduct(norm1, norm2);
+  const cos = cosineSimilarity(vec1, vec2);
+  assert.ok(Math.abs(dot - cos) < 0.001);
+  assert.ok(Math.abs(dot - 0.6) < 0.001);
+
+  assert.strictEqual(getDomainFromPath('Work/Projects/Task.md'), 'Work');
+  assert.strictEqual(getDomainFromPath('Notes.md'), '(Root)');
+});
+
+test('vector-search: findClustersForNote performs targeted single-note clustering', () => {
+  const chunkNoteA = {
+    id: 'chunk-a',
+    filePath: 'Work/NoteA.md',
+    text: 'Architecture of distributed systems.',
+    breadcrumbs: '[Work/NoteA.md > Arch]',
+    fullContext: '[Work/NoteA.md > Arch]\nArchitecture of distributed systems.',
+    startLine: 1,
+    endLine: 2,
+    embedding: new Float32Array([1.0, 0.0, 0.0])
+  };
+
+  const chunkNoteB = {
+    id: 'chunk-b',
+    filePath: 'Personal/NoteB.md',
+    text: 'Distributed system concepts and architecture.',
+    breadcrumbs: '[Personal/NoteB.md > Concepts]',
+    fullContext: '[Personal/NoteB.md > Concepts]\nDistributed system concepts and architecture.',
+    startLine: 5,
+    endLine: 6,
+    embedding: new Float32Array([0.98, 0.02, 0.0])
+  };
+
+  const chunkOther = {
+    id: 'chunk-c',
+    filePath: 'Archive/Other.md',
+    text: 'Completely different topic.',
+    breadcrumbs: '[Archive/Other.md]',
+    fullContext: '[Archive/Other.md]\nCompletely different topic.',
+    startLine: 1,
+    endLine: 2,
+    embedding: new Float32Array([0.0, 1.0, 0.0])
+  };
+
+  const results = findClustersForNote('Work/NoteA.md', [chunkNoteA, chunkNoteB, chunkOther], 0.85);
+  assert.strictEqual(results.length, 1);
+  assert.strictEqual(results[0].domain, 'Cross-folder');
+  assert.ok(results[0].chunks.some(c => c.filePath === 'Work/NoteA.md'));
+  assert.ok(results[0].chunks.some(c => c.filePath === 'Personal/NoteB.md'));
 });
 
 test('diff: calculates word-level changes accurately', () => {

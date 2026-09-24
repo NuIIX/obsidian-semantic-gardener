@@ -61,3 +61,35 @@ export function sanitizeNoteTitle(title: string): string {
     .replace(/[:/\\*?"<>|#^\[\]]/g, '')
     .trim();
 }
+
+/**
+ * Injects or updates YAML frontmatter with aliases for an Obsidian note.
+ */
+export function ensureFrontmatterAliases(content: string, aliases?: string[]): string {
+  if (!aliases || aliases.length === 0) {
+    return content;
+  }
+  const cleanAliases = Array.from(new Set(
+    aliases
+      .map(a => a.trim().replace(/[:/\\*?"<>|#^\[\]]/g, ''))
+      .filter(a => a.length > 0)
+  ));
+  if (cleanAliases.length === 0) {
+    return content;
+  }
+
+  const frontmatterRegex = /^---\r?\n([\s\S]*?)\r?\n---/;
+  const match = content.match(frontmatterRegex);
+  const formattedAliases = cleanAliases.map(a => `  - "${a.replace(/"/g, '\\"')}"`).join('\n');
+
+  if (match) {
+    const yamlBody = match[1];
+    if (/aliases\s*:/i.test(yamlBody)) {
+      return content;
+    }
+    const updatedYaml = `${yamlBody.trimEnd()}\naliases:\n${formattedAliases}`;
+    return content.replace(frontmatterRegex, `---\n${updatedYaml}\n---`);
+  }
+
+  return `---\naliases:\n${formattedAliases}\n---\n\n${content.trimStart()}`;
+}
