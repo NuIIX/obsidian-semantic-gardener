@@ -38,6 +38,11 @@ export function getMarkdownFiles(app: App, excludedFolders: string[] = []): TFil
     .filter(f => f.length > 0);
 
   return app.vault.getMarkdownFiles().filter(file => {
+    // Exclude Obsidian Excalidraw drawing files which contain massive JSON boilerplate
+    if (file.name.endsWith('.excalidraw.md') || file.path.endsWith('.excalidraw.md')) {
+      return false;
+    }
+
     const filePath = normalizePath(file.path);
     for (const excluded of normalizedExcludes) {
       if (filePath.startsWith(excluded)) {

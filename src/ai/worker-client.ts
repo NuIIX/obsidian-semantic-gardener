@@ -76,6 +76,10 @@ export class WorkerClient {
       clearTimeout(this.initTimeoutTimer);
       this.initTimeoutTimer = null;
     }
+    if (this.worker) {
+      try { this.worker.terminate(); } catch {}
+      this.worker = null;
+    }
     const reject = this.readyReject;
     this.readyResolve = null;
     this.readyReject = null;
@@ -88,6 +92,11 @@ export class WorkerClient {
 
   private async spawnWorker(): Promise<void> {
     try {
+      if (this.worker) {
+        try { this.worker.terminate(); } catch {}
+        this.worker = null;
+      }
+
       const configDir = (this.app?.vault as any)?.configDir || '.obsidian';
       const workerFilePath = `${configDir}/plugins/${this.pluginId}/worker.js`;
       let workerUrl: string;

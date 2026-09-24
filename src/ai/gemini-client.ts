@@ -7,7 +7,8 @@ const SYSTEM_INSTRUCTION = `Ты — строгий редактор персо�
 Объединяй ТОЛЬКО концепции с одинаковым физическим или абстрактным смыслом.
 - ЗАПРЕЩЕНО объединять омонимы и междоменные метафоры (например, "бутылочное горлышко" в архитектуре процессоров и "бутылочное горлышко" в бизнес-процессах склада — это РАЗНЫЕ сущности из разных доменов).
 - Обращай пристальное внимание на Breadcrumbs [Путь > Заголовок > ...], в которых находятся фрагменты.
-- Если контексты фрагментов принадлежат несовместимым областям знаний или это совпадение лишь по слову, установи "isDuplicate": false и укажи понятную "rejectionReason".
+- Если контексты фрагментов принадлежат несовместимым областям знаний или это совпадение лишь по слову, установи "isDuplicate": false и укажи краткую, понятную "rejectionReason" (1-2 предложения).
+- ВНИМАНИЕ: Если "isDuplicate": true, поле "rejectionReason" ОБЯЗАТЕЛЬНО должно быть пустой строкой "". КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать в rejectionReason любые объяснения или повторяющиеся строки, если дубликат подтвержден!
 
 ПРАВИЛО МИКРОХИРУРГИИ СТИЛЯ (Surgical Span Replacer Mode):
 - Если isDuplicate: true:
@@ -16,7 +17,9 @@ const SYSTEM_INSTRUCTION = `Ты — строгий редактор персо�
   3. Для КАЖДОГО фрагмента найди МИНИМАЛЬНЫЙ точный сегмент текста ("originalSpan"), который непосредственно выражает дублируемое определение.
      ВНИМАНИЕ: "originalSpan" ДОЛЖЕН СТРОГО, СИМВОЛ В СИМВОЛ, присутствовать в исходном тексте фрагмента!
   4. Составь "suggestedInlineSpan": микрохирургическая замена оригинального сегмента. ЗАПРЕЩЕНО переписывать весь абзац! Сохраняй авторский синтаксис, пунктуацию, сленг и грамматику, встраивая [[conceptTitle]] или [[conceptTitle|алиас]].
-  5. Составь "transclusionSpan": альтернативный вариант замены на трансклюзию вида ![[conceptTitle]].`;
+  5. Составь "transclusionSpan": альтернативный вариант замены на трансклюзию вида ![[conceptTitle]].
+- Если isDuplicate: false:
+  Поля conceptTitle, canonicalNoteMarkdown и modifications должны отсутствовать или быть пустыми.`;
 
 export class GeminiClient {
   private apiKey: string;
@@ -69,35 +72,61 @@ ${chunk.text}
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: refactorEngineSchema,
-        temperature: 0.2
+        temperature: 0.1,
+        maxOutputTokens: 2500
       }
     };
 
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
-    } catch (netErr: any) {
-      throw new Error(`Сетевая ошибка при запросе к Gemini API: ${netErr.message}`);
-    }
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+    let rawText: string | undefined;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      let parsedError = errorText;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      let response: Response;
       try {
-        const errJson = JSON.parse(errorText);
-        parsedError = errJson.error?.message || errorText;
-      } catch { }
-      throw new Error(`Ошибка Gemini API (${response.status}): ${parsedError}`);
-    }
+        response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+      } catch (netErr: any) {
+        lastError = new Error(`Сетевая ошибка при запросе к Gemini API: ${netErr.message}`);
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, 2000 * attempt));
+          continue;
+        }
+        throw lastError;
+      }
 
-    const data = await response.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!response.ok) {
+        const errorText = await response.text();
+        let parsedError = errorText;
+        try {
+          const errJson = JSON.parse(errorText);
+          parsedError = errJson.error?.message || errorText;
+        } catch { }
+
+        // Handle 429 (quota / rate limit) and 503 (transient server unavailable) with backoff
+        if ((response.status === 429 || response.status === 503) && attempt < maxRetries) {
+          let retryDelayMs = 25000;
+          const match = parsedError.match(/retry in\s+([0-9.]+)\s*s/i);
+          if (match && match[1]) {
+            retryDelayMs = Math.ceil(parseFloat(match[1]) * 1000) + 1500;
+          }
+          console.warn(`[GeminiClient] Quota limit (${response.status}) hit. Cooldown ${Math.round(retryDelayMs / 1000)}s before retry ${attempt}/${maxRetries}...`);
+          await new Promise(r => setTimeout(r, retryDelayMs));
+          continue;
+        }
+
+        throw new Error(`Ошибка Gemini API (${response.status}): ${parsedError}`);
+      }
+
+      const data = await response.json();
+      rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      break;
+    }
 
     if (!rawText) {
       throw new Error('Пустой ответ от Gemini API.');
@@ -107,7 +136,17 @@ ${chunk.text}
     try {
       parsed = JSON.parse(rawText);
     } catch (e: any) {
-      throw new Error(`Не удалось распарсить JSON от модели: ${e.message}. Исходный ответ: ${rawText}`);
+      let sanitized = rawText.trim();
+      if (sanitized.startsWith('```json')) sanitized = sanitized.slice(7);
+      if (sanitized.startsWith('```')) sanitized = sanitized.slice(3);
+      if (sanitized.endsWith('```')) sanitized = sanitized.slice(0, -3);
+      sanitized = sanitized.trim();
+      try {
+        parsed = JSON.parse(sanitized);
+      } catch {
+        const preview = rawText.length > 250 ? `${rawText.slice(0, 250)}...` : rawText;
+        throw new Error(`Не удалось распарсить JSON от модели: ${e.message}. Исходный ответ: ${preview}`);
+      }
     }
 
     // Convert to RefactorPlan

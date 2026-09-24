@@ -7,7 +7,7 @@ export const refactorEngineSchema = {
     },
     rejectionReason: { 
       type: "STRING", 
-      description: "Brief explanation if isDuplicate is false (e.g., 'Different domains: CPU hardware bottleneck vs business workflow bottleneck')" 
+      description: "Brief 1-2 sentence explanation if isDuplicate is false. MUST BE EMPTY STRING '' if isDuplicate is true." 
     },
     conceptTitle: { 
       type: "STRING", 

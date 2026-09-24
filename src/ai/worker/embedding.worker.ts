@@ -60,7 +60,6 @@ let initError: string | null = null;
 
 async function getExtractor() {
   if (extractor) return extractor;
-  if (initError) throw new Error(initError);
   if (isInitializing) {
     while (isInitializing) {
       await new Promise(r => setTimeout(r, 100));
@@ -70,46 +69,68 @@ async function getExtractor() {
   }
 
   isInitializing = true;
-  try {
-    // Load feature-extraction pipeline with ONNX quantized model for fast in-browser inference
-    extractor = await pipeline('feature-extraction', MODEL_NAME, {
-      quantized: true,
-      progress_callback: (data: any) => {
-        if (data?.status === 'progress') {
-          const progressMsg: WorkerOutMessage = {
-            type: 'MODEL_DOWNLOAD_PROGRESS',
-            file: data.file || 'model',
-            progress: Math.round(data.progress || 0)
-          };
-          self.postMessage(progressMsg);
-        } else if (data?.status === 'done' || data?.status === 'ready') {
-          const progressMsg: WorkerOutMessage = {
-            type: 'MODEL_DOWNLOAD_PROGRESS',
-            file: data.file || 'model',
-            progress: 100
-          };
-          self.postMessage(progressMsg);
+  initError = null;
+
+  const maxRetries = 3;
+  let lastErr: any = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Load feature-extraction pipeline with ONNX quantized model for fast in-browser inference
+      extractor = await pipeline('feature-extraction', MODEL_NAME, {
+        quantized: true,
+        progress_callback: (data: any) => {
+          if (data?.status === 'progress') {
+            const progressMsg: WorkerOutMessage = {
+              type: 'MODEL_DOWNLOAD_PROGRESS',
+              file: data.file || 'model',
+              progress: Math.round(data.progress || 0)
+            };
+            self.postMessage(progressMsg);
+          } else if (data?.status === 'done' || data?.status === 'ready') {
+            const progressMsg: WorkerOutMessage = {
+              type: 'MODEL_DOWNLOAD_PROGRESS',
+              file: data.file || 'model',
+              progress: 100
+            };
+            self.postMessage(progressMsg);
+          }
         }
+      });
+      break;
+    } catch (err: any) {
+      lastErr = err;
+      if (attempt < maxRetries) {
+        self.postMessage({
+          type: 'MODEL_DOWNLOAD_PROGRESS',
+          file: `Сетевой сбой при загрузке модели, повтор ${attempt + 1}/${maxRetries}...`,
+          progress: 0
+        });
+        await new Promise(r => setTimeout(r, 2000 * attempt));
       }
-    });
-    self.postMessage({
-      type: 'MODEL_DOWNLOAD_PROGRESS',
-      file: 'ONNX WebAssembly скомпилирован',
-      progress: 100
-    });
-    isInitializing = false;
-    return extractor;
-  } catch (err: any) {
-    isInitializing = false;
-    initError = err?.message || 'Failed to initialize @xenova/transformers pipeline';
+    }
+  }
+
+  isInitializing = false;
+
+  if (!extractor) {
+    initError = lastErr?.message || 'Failed to initialize @xenova/transformers pipeline';
     throw new Error(initError);
   }
+
+  self.postMessage({
+    type: 'MODEL_DOWNLOAD_PROGRESS',
+    file: 'ONNX WebAssembly скомпилирован',
+    progress: 100
+  });
+  return extractor;
 }
 
 self.onmessage = async (event: MessageEvent<WorkerInMessage>) => {
   const msg = event.data;
 
   if (msg.type === 'INIT') {
+    initError = null;
     try {
       await getExtractor();
       const readyMsg: WorkerOutMessage = { type: 'READY' };

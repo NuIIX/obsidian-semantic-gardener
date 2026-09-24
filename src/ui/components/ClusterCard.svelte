@@ -8,7 +8,7 @@
 
   $: similarityPercent = Math.round(cluster.similarity * 100);
   $: fileNames = Array.from(new Set(cluster.chunks.map(c => c.filePath.split('/').pop() || c.filePath)));
-  $: displayTitle = plan?.conceptTitle || (cluster.chunks[0]?.breadcrumbs ? cluster.chunks[0].breadcrumbs.replace(/[[\]]/g, '') : `Кластер #${cluster.id.slice(0, 8)}`);
+  $: displayTitle = plan?.conceptTitle || (cluster.chunks[0]?.breadcrumbs ? cluster.chunks[0].breadcrumbs.replace(/[[\]]/g, '') : (fileNames[0]?.replace(/\.md$/, '') || 'Кластер'));
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->

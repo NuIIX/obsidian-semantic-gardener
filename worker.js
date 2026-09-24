@@ -29051,7 +29051,6 @@ ${t2}`);
   var initError = null;
   async function getExtractor() {
     if (extractor) return extractor;
-    if (initError) throw new Error(initError);
     if (isInitializing) {
       while (isInitializing) {
         await new Promise((r) => setTimeout(r, 100));
@@ -29060,43 +29059,60 @@ ${t2}`);
       if (initError) throw new Error(initError);
     }
     isInitializing = true;
-    try {
-      extractor = await pipeline("feature-extraction", MODEL_NAME, {
-        quantized: true,
-        progress_callback: (data) => {
-          if (data?.status === "progress") {
-            const progressMsg = {
-              type: "MODEL_DOWNLOAD_PROGRESS",
-              file: data.file || "model",
-              progress: Math.round(data.progress || 0)
-            };
-            self.postMessage(progressMsg);
-          } else if (data?.status === "done" || data?.status === "ready") {
-            const progressMsg = {
-              type: "MODEL_DOWNLOAD_PROGRESS",
-              file: data.file || "model",
-              progress: 100
-            };
-            self.postMessage(progressMsg);
+    initError = null;
+    const maxRetries = 3;
+    let lastErr = null;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        extractor = await pipeline("feature-extraction", MODEL_NAME, {
+          quantized: true,
+          progress_callback: (data) => {
+            if (data?.status === "progress") {
+              const progressMsg = {
+                type: "MODEL_DOWNLOAD_PROGRESS",
+                file: data.file || "model",
+                progress: Math.round(data.progress || 0)
+              };
+              self.postMessage(progressMsg);
+            } else if (data?.status === "done" || data?.status === "ready") {
+              const progressMsg = {
+                type: "MODEL_DOWNLOAD_PROGRESS",
+                file: data.file || "model",
+                progress: 100
+              };
+              self.postMessage(progressMsg);
+            }
           }
+        });
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < maxRetries) {
+          self.postMessage({
+            type: "MODEL_DOWNLOAD_PROGRESS",
+            file: `\u0421\u0435\u0442\u0435\u0432\u043E\u0439 \u0441\u0431\u043E\u0439 \u043F\u0440\u0438 \u0437\u0430\u0433\u0440\u0443\u0437\u043A\u0435 \u043C\u043E\u0434\u0435\u043B\u0438, \u043F\u043E\u0432\u0442\u043E\u0440 ${attempt + 1}/${maxRetries}...`,
+            progress: 0
+          });
+          await new Promise((r) => setTimeout(r, 2e3 * attempt));
         }
-      });
-      self.postMessage({
-        type: "MODEL_DOWNLOAD_PROGRESS",
-        file: "ONNX WebAssembly \u0441\u043A\u043E\u043C\u043F\u0438\u043B\u0438\u0440\u043E\u0432\u0430\u043D",
-        progress: 100
-      });
-      isInitializing = false;
-      return extractor;
-    } catch (err) {
-      isInitializing = false;
-      initError = err?.message || "Failed to initialize @xenova/transformers pipeline";
+      }
+    }
+    isInitializing = false;
+    if (!extractor) {
+      initError = lastErr?.message || "Failed to initialize @xenova/transformers pipeline";
       throw new Error(initError);
     }
+    self.postMessage({
+      type: "MODEL_DOWNLOAD_PROGRESS",
+      file: "ONNX WebAssembly \u0441\u043A\u043E\u043C\u043F\u0438\u043B\u0438\u0440\u043E\u0432\u0430\u043D",
+      progress: 100
+    });
+    return extractor;
   }
   self.onmessage = async (event) => {
     const msg = event.data;
     if (msg.type === "INIT") {
+      initError = null;
       try {
         await getExtractor();
         const readyMsg = { type: "READY" };

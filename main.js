@@ -6503,9 +6503,12 @@ function ClusterCard($$anchor, $$props) {
   legacy_pre_effect(() => deep_read_state(cluster()), () => {
     set(fileNames, Array.from(new Set(cluster().chunks.map((c) => c.filePath.split("/").pop() || c.filePath))));
   });
-  legacy_pre_effect(() => (deep_read_state(plan()), deep_read_state(cluster())), () => {
-    set(displayTitle, plan()?.conceptTitle || (cluster().chunks[0]?.breadcrumbs ? cluster().chunks[0].breadcrumbs.replace(/[[\]]/g, "") : `\u041A\u043B\u0430\u0441\u0442\u0435\u0440 #${cluster().id.slice(0, 8)}`));
-  });
+  legacy_pre_effect(
+    () => (deep_read_state(plan()), deep_read_state(cluster()), get(fileNames)),
+    () => {
+      set(displayTitle, plan()?.conceptTitle || (cluster().chunks[0]?.breadcrumbs ? cluster().chunks[0].breadcrumbs.replace(/[[\]]/g, "") : get(fileNames)[0]?.replace(/\.md$/, "") || "\u041A\u043B\u0430\u0441\u0442\u0435\u0440"));
+    }
+  );
   legacy_pre_effect_reset();
   init();
   var div = root_5();
@@ -8546,7 +8549,7 @@ var refactorEngineSchema = {
     },
     rejectionReason: {
       type: "STRING",
-      description: "Brief explanation if isDuplicate is false (e.g., 'Different domains: CPU hardware bottleneck vs business workflow bottleneck')"
+      description: "Brief 1-2 sentence explanation if isDuplicate is false. MUST BE EMPTY STRING '' if isDuplicate is true."
     },
     conceptTitle: {
       type: "STRING",
@@ -8592,7 +8595,8 @@ var SYSTEM_INSTRUCTION = `\u0422\u044B \u2014 \u0441\u0442\u0440\u043E\u0433\u04
 \u041E\u0431\u044A\u0435\u0434\u0438\u043D\u044F\u0439 \u0422\u041E\u041B\u042C\u041A\u041E \u043A\u043E\u043D\u0446\u0435\u043F\u0446\u0438\u0438 \u0441 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u043C \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u043C \u0438\u043B\u0438 \u0430\u0431\u0441\u0442\u0440\u0430\u043A\u0442\u043D\u044B\u043C \u0441\u043C\u044B\u0441\u043B\u043E\u043C.
 - \u0417\u0410\u041F\u0420\u0415\u0429\u0415\u041D\u041E \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u044F\u0442\u044C \u043E\u043C\u043E\u043D\u0438\u043C\u044B \u0438 \u043C\u0435\u0436\u0434\u043E\u043C\u0435\u043D\u043D\u044B\u0435 \u043C\u0435\u0442\u0430\u0444\u043E\u0440\u044B (\u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, "\u0431\u0443\u0442\u044B\u043B\u043E\u0447\u043D\u043E\u0435 \u0433\u043E\u0440\u043B\u044B\u0448\u043A\u043E" \u0432 \u0430\u0440\u0445\u0438\u0442\u0435\u043A\u0442\u0443\u0440\u0435 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440\u043E\u0432 \u0438 "\u0431\u0443\u0442\u044B\u043B\u043E\u0447\u043D\u043E\u0435 \u0433\u043E\u0440\u043B\u044B\u0448\u043A\u043E" \u0432 \u0431\u0438\u0437\u043D\u0435\u0441-\u043F\u0440\u043E\u0446\u0435\u0441\u0441\u0430\u0445 \u0441\u043A\u043B\u0430\u0434\u0430 \u2014 \u044D\u0442\u043E \u0420\u0410\u0417\u041D\u042B\u0415 \u0441\u0443\u0449\u043D\u043E\u0441\u0442\u0438 \u0438\u0437 \u0440\u0430\u0437\u043D\u044B\u0445 \u0434\u043E\u043C\u0435\u043D\u043E\u0432).
 - \u041E\u0431\u0440\u0430\u0449\u0430\u0439 \u043F\u0440\u0438\u0441\u0442\u0430\u043B\u044C\u043D\u043E\u0435 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u0435 \u043D\u0430 Breadcrumbs [\u041F\u0443\u0442\u044C > \u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A > ...], \u0432 \u043A\u043E\u0442\u043E\u0440\u044B\u0445 \u043D\u0430\u0445\u043E\u0434\u044F\u0442\u0441\u044F \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u044B.
-- \u0415\u0441\u043B\u0438 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u044B \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u043E\u0432 \u043F\u0440\u0438\u043D\u0430\u0434\u043B\u0435\u0436\u0430\u0442 \u043D\u0435\u0441\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u043C\u044B\u043C \u043E\u0431\u043B\u0430\u0441\u0442\u044F\u043C \u0437\u043D\u0430\u043D\u0438\u0439 \u0438\u043B\u0438 \u044D\u0442\u043E \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0435 \u043B\u0438\u0448\u044C \u043F\u043E \u0441\u043B\u043E\u0432\u0443, \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u0438 "isDuplicate": false \u0438 \u0443\u043A\u0430\u0436\u0438 \u043F\u043E\u043D\u044F\u0442\u043D\u0443\u044E "rejectionReason".
+- \u0415\u0441\u043B\u0438 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u044B \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u043E\u0432 \u043F\u0440\u0438\u043D\u0430\u0434\u043B\u0435\u0436\u0430\u0442 \u043D\u0435\u0441\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u043C\u044B\u043C \u043E\u0431\u043B\u0430\u0441\u0442\u044F\u043C \u0437\u043D\u0430\u043D\u0438\u0439 \u0438\u043B\u0438 \u044D\u0442\u043E \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0435 \u043B\u0438\u0448\u044C \u043F\u043E \u0441\u043B\u043E\u0432\u0443, \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u0438 "isDuplicate": false \u0438 \u0443\u043A\u0430\u0436\u0438 \u043A\u0440\u0430\u0442\u043A\u0443\u044E, \u043F\u043E\u043D\u044F\u0442\u043D\u0443\u044E "rejectionReason" (1-2 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u044F).
+- \u0412\u041D\u0418\u041C\u0410\u041D\u0418\u0415: \u0415\u0441\u043B\u0438 "isDuplicate": true, \u043F\u043E\u043B\u0435 "rejectionReason" \u041E\u0411\u042F\u0417\u0410\u0422\u0415\u041B\u042C\u041D\u041E \u0434\u043E\u043B\u0436\u043D\u043E \u0431\u044B\u0442\u044C \u043F\u0443\u0441\u0442\u043E\u0439 \u0441\u0442\u0440\u043E\u043A\u043E\u0439 "". \u041A\u0410\u0422\u0415\u0413\u041E\u0420\u0418\u0427\u0415\u0421\u041A\u0418 \u0417\u0410\u041F\u0420\u0415\u0429\u0415\u041D\u041E \u043F\u0438\u0441\u0430\u0442\u044C \u0432 rejectionReason \u043B\u044E\u0431\u044B\u0435 \u043E\u0431\u044A\u044F\u0441\u043D\u0435\u043D\u0438\u044F \u0438\u043B\u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u044E\u0449\u0438\u0435\u0441\u044F \u0441\u0442\u0440\u043E\u043A\u0438, \u0435\u0441\u043B\u0438 \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D!
 
 \u041F\u0420\u0410\u0412\u0418\u041B\u041E \u041C\u0418\u041A\u0420\u041E\u0425\u0418\u0420\u0423\u0420\u0413\u0418\u0418 \u0421\u0422\u0418\u041B\u042F (Surgical Span Replacer Mode):
 - \u0415\u0441\u043B\u0438 isDuplicate: true:
@@ -8601,7 +8605,9 @@ var SYSTEM_INSTRUCTION = `\u0422\u044B \u2014 \u0441\u0442\u0440\u043E\u0433\u04
   3. \u0414\u043B\u044F \u041A\u0410\u0416\u0414\u041E\u0413\u041E \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430 \u043D\u0430\u0439\u0434\u0438 \u041C\u0418\u041D\u0418\u041C\u0410\u041B\u042C\u041D\u042B\u0419 \u0442\u043E\u0447\u043D\u044B\u0439 \u0441\u0435\u0433\u043C\u0435\u043D\u0442 \u0442\u0435\u043A\u0441\u0442\u0430 ("originalSpan"), \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u043D\u0435\u043F\u043E\u0441\u0440\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u043E \u0432\u044B\u0440\u0430\u0436\u0430\u0435\u0442 \u0434\u0443\u0431\u043B\u0438\u0440\u0443\u0435\u043C\u043E\u0435 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435.
      \u0412\u041D\u0418\u041C\u0410\u041D\u0418\u0415: "originalSpan" \u0414\u041E\u041B\u0416\u0415\u041D \u0421\u0422\u0420\u041E\u0413\u041E, \u0421\u0418\u041C\u0412\u041E\u041B \u0412 \u0421\u0418\u041C\u0412\u041E\u041B, \u043F\u0440\u0438\u0441\u0443\u0442\u0441\u0442\u0432\u043E\u0432\u0430\u0442\u044C \u0432 \u0438\u0441\u0445\u043E\u0434\u043D\u043E\u043C \u0442\u0435\u043A\u0441\u0442\u0435 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430!
   4. \u0421\u043E\u0441\u0442\u0430\u0432\u044C "suggestedInlineSpan": \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0437\u0430\u043C\u0435\u043D\u0430 \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u0441\u0435\u0433\u043C\u0435\u043D\u0442\u0430. \u0417\u0410\u041F\u0420\u0415\u0429\u0415\u041D\u041E \u043F\u0435\u0440\u0435\u043F\u0438\u0441\u044B\u0432\u0430\u0442\u044C \u0432\u0435\u0441\u044C \u0430\u0431\u0437\u0430\u0446! \u0421\u043E\u0445\u0440\u0430\u043D\u044F\u0439 \u0430\u0432\u0442\u043E\u0440\u0441\u043A\u0438\u0439 \u0441\u0438\u043D\u0442\u0430\u043A\u0441\u0438\u0441, \u043F\u0443\u043D\u043A\u0442\u0443\u0430\u0446\u0438\u044E, \u0441\u043B\u0435\u043D\u0433 \u0438 \u0433\u0440\u0430\u043C\u043C\u0430\u0442\u0438\u043A\u0443, \u0432\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u044F [[conceptTitle]] \u0438\u043B\u0438 [[conceptTitle|\u0430\u043B\u0438\u0430\u0441]].
-  5. \u0421\u043E\u0441\u0442\u0430\u0432\u044C "transclusionSpan": \u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442 \u0437\u0430\u043C\u0435\u043D\u044B \u043D\u0430 \u0442\u0440\u0430\u043D\u0441\u043A\u043B\u044E\u0437\u0438\u044E \u0432\u0438\u0434\u0430 ![[conceptTitle]].`;
+  5. \u0421\u043E\u0441\u0442\u0430\u0432\u044C "transclusionSpan": \u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442 \u0437\u0430\u043C\u0435\u043D\u044B \u043D\u0430 \u0442\u0440\u0430\u043D\u0441\u043A\u043B\u044E\u0437\u0438\u044E \u0432\u0438\u0434\u0430 ![[conceptTitle]].
+- \u0415\u0441\u043B\u0438 isDuplicate: false:
+  \u041F\u043E\u043B\u044F conceptTitle, canonicalNoteMarkdown \u0438 modifications \u0434\u043E\u043B\u0436\u043D\u044B \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u043E\u0432\u0430\u0442\u044C \u0438\u043B\u0438 \u0431\u044B\u0442\u044C \u043F\u0443\u0441\u0442\u044B\u043C\u0438.`;
 var GeminiClient = class {
   apiKey;
   model;
@@ -8647,33 +8653,55 @@ ${clusterPromptPayload}`;
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: refactorEngineSchema,
-        temperature: 0.2
+        temperature: 0.1,
+        maxOutputTokens: 2500
       }
     };
-    let response;
-    try {
-      response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestBody)
-      });
-    } catch (netErr) {
-      throw new Error(`\u0421\u0435\u0442\u0435\u0432\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0437\u0430\u043F\u0440\u043E\u0441\u0435 \u043A Gemini API: ${netErr.message}`);
-    }
-    if (!response.ok) {
-      const errorText = await response.text();
-      let parsedError = errorText;
+    const maxRetries = 3;
+    let lastError = null;
+    let rawText;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      let response;
       try {
-        const errJson = JSON.parse(errorText);
-        parsedError = errJson.error?.message || errorText;
-      } catch {
+        response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(requestBody)
+        });
+      } catch (netErr) {
+        lastError = new Error(`\u0421\u0435\u0442\u0435\u0432\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0437\u0430\u043F\u0440\u043E\u0441\u0435 \u043A Gemini API: ${netErr.message}`);
+        if (attempt < maxRetries) {
+          await new Promise((r) => setTimeout(r, 2e3 * attempt));
+          continue;
+        }
+        throw lastError;
       }
-      throw new Error(`\u041E\u0448\u0438\u0431\u043A\u0430 Gemini API (${response.status}): ${parsedError}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        let parsedError = errorText;
+        try {
+          const errJson = JSON.parse(errorText);
+          parsedError = errJson.error?.message || errorText;
+        } catch {
+        }
+        if ((response.status === 429 || response.status === 503) && attempt < maxRetries) {
+          let retryDelayMs = 25e3;
+          const match = parsedError.match(/retry in\s+([0-9.]+)\s*s/i);
+          if (match && match[1]) {
+            retryDelayMs = Math.ceil(parseFloat(match[1]) * 1e3) + 1500;
+          }
+          console.warn(`[GeminiClient] Quota limit (${response.status}) hit. Cooldown ${Math.round(retryDelayMs / 1e3)}s before retry ${attempt}/${maxRetries}...`);
+          await new Promise((r) => setTimeout(r, retryDelayMs));
+          continue;
+        }
+        throw new Error(`\u041E\u0448\u0438\u0431\u043A\u0430 Gemini API (${response.status}): ${parsedError}`);
+      }
+      const data = await response.json();
+      rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      break;
     }
-    const data = await response.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!rawText) {
       throw new Error("\u041F\u0443\u0441\u0442\u043E\u0439 \u043E\u0442\u0432\u0435\u0442 \u043E\u0442 Gemini API.");
     }
@@ -8681,7 +8709,17 @@ ${clusterPromptPayload}`;
     try {
       parsed = JSON.parse(rawText);
     } catch (e) {
-      throw new Error(`\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u0430\u0441\u043F\u0430\u0440\u0441\u0438\u0442\u044C JSON \u043E\u0442 \u043C\u043E\u0434\u0435\u043B\u0438: ${e.message}. \u0418\u0441\u0445\u043E\u0434\u043D\u044B\u0439 \u043E\u0442\u0432\u0435\u0442: ${rawText}`);
+      let sanitized = rawText.trim();
+      if (sanitized.startsWith("```json")) sanitized = sanitized.slice(7);
+      if (sanitized.startsWith("```")) sanitized = sanitized.slice(3);
+      if (sanitized.endsWith("```")) sanitized = sanitized.slice(0, -3);
+      sanitized = sanitized.trim();
+      try {
+        parsed = JSON.parse(sanitized);
+      } catch {
+        const preview = rawText.length > 250 ? `${rawText.slice(0, 250)}...` : rawText;
+        throw new Error(`\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u0430\u0441\u043F\u0430\u0440\u0441\u0438\u0442\u044C JSON \u043E\u0442 \u043C\u043E\u0434\u0435\u043B\u0438: ${e.message}. \u0418\u0441\u0445\u043E\u0434\u043D\u044B\u0439 \u043E\u0442\u0432\u0435\u0442: ${preview}`);
+      }
     }
     const modifications = [];
     if (parsed.isDuplicate && parsed.modifications && Array.isArray(parsed.modifications)) {
@@ -8771,6 +8809,13 @@ var WorkerClient = class {
       clearTimeout(this.initTimeoutTimer);
       this.initTimeoutTimer = null;
     }
+    if (this.worker) {
+      try {
+        this.worker.terminate();
+      } catch {
+      }
+      this.worker = null;
+    }
     const reject = this.readyReject;
     this.readyResolve = null;
     this.readyReject = null;
@@ -8782,6 +8827,13 @@ var WorkerClient = class {
   }
   async spawnWorker() {
     try {
+      if (this.worker) {
+        try {
+          this.worker.terminate();
+        } catch {
+        }
+        this.worker = null;
+      }
       const configDir = this.app?.vault?.configDir || ".obsidian";
       const workerFilePath = `${configDir}/plugins/${this.pluginId}/worker.js`;
       let workerUrl;
@@ -9264,6 +9316,9 @@ async function ensureFolderExists(app, folderPath) {
 function getMarkdownFiles(app, excludedFolders = []) {
   const normalizedExcludes = excludedFolders.map((f) => (0, import_obsidian4.normalizePath)(f.trim())).filter((f) => f.length > 0);
   return app.vault.getMarkdownFiles().filter((file) => {
+    if (file.name.endsWith(".excalidraw.md") || file.path.endsWith(".excalidraw.md")) {
+      return false;
+    }
     const filePath = (0, import_obsidian4.normalizePath)(file.path);
     for (const excluded of normalizedExcludes) {
       if (filePath.startsWith(excluded)) {
@@ -9810,17 +9865,23 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
           this.scanProgress = `LLM Gatekeeper (${i + 1}/${this.candidateClusters.length}): \u0410\u043D\u0430\u043B\u0438\u0437 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430...`;
           this.logger.updateProgress("LLM Gatekeeper", gatekeeperPct, this.scanProgress);
           this.notifyViews();
+          const clusterNumber = `#${i + 1}`;
+          const sampleName = cluster.chunks[0]?.filePath?.split("/").pop()?.replace(/\.md$/, "") || "";
+          const clusterLabel = `\u041A\u043B\u0430\u0441\u0442\u0435\u0440 ${clusterNumber} ("${sampleName}")`;
           try {
             const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
             this.refactorPlans[cluster.id] = plan;
             if (plan.isDuplicate) {
-              this.logger.success(`\u041A\u043B\u0430\u0441\u0442\u0435\u0440 ${cluster.id.slice(0, 8)} \u043E\u0434\u043E\u0431\u0440\u0435\u043D: \u043A\u043E\u043D\u0446\u0435\u043F\u0442 "${plan.conceptTitle}".`);
+              this.logger.success(`${clusterLabel} \u043E\u0434\u043E\u0431\u0440\u0435\u043D: \u043A\u043E\u043D\u0446\u0435\u043F\u0442 "${plan.conceptTitle}".`);
             } else {
-              this.logger.warn(`\u041A\u043B\u0430\u0441\u0442\u0435\u0440 ${cluster.id.slice(0, 8)} \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D: ${plan.rejectionReason || "\u041D\u0435\u0442 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F"}.`);
+              this.logger.info(`[\u041E\u0442\u043A\u043B\u043E\u043D\u0435\u043D] ${clusterLabel}: ${plan.rejectionReason || "\u041D\u0435\u0442 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F"}.`);
             }
           } catch (aiErr) {
             console.error(`AI Analysis error for cluster ${cluster.id}:`, aiErr);
-            this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 AI \u0434\u043B\u044F \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 ${cluster.id.slice(0, 8)}: ${aiErr.message}`);
+            this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 AI \u0434\u043B\u044F ${clusterLabel}: ${aiErr.message}`);
+          }
+          if (i < this.candidateClusters.length - 1 && !signal.aborted) {
+            await new Promise((r) => setTimeout(r, 1500));
           }
         }
       } else {
@@ -9929,15 +9990,23 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
             const cluster = this.candidateClusters[i];
             const pct = 75 + Math.round((i + 1) / this.candidateClusters.length * 25);
             this.logger.updateProgress("LLM Gatekeeper", pct, `\u0410\u043D\u0430\u043B\u0438\u0437 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 ${i + 1}/${this.candidateClusters.length}...`);
+            const clusterNumber = `#${i + 1}`;
+            const sampleName = cluster.chunks[0]?.filePath?.split("/").pop()?.replace(/\.md$/, "") || "";
+            const clusterLabel = `\u041A\u043B\u0430\u0441\u0442\u0435\u0440 ${clusterNumber} ("${sampleName}")`;
             try {
               const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
               this.refactorPlans[cluster.id] = plan;
               if (plan.isDuplicate) {
-                this.logger.success(`\u041A\u043B\u0430\u0441\u0442\u0435\u0440 \u043E\u0434\u043E\u0431\u0440\u0435\u043D: \u043A\u043E\u043D\u0446\u0435\u043F\u0442 "${plan.conceptTitle}".`);
+                this.logger.success(`${clusterLabel} \u043E\u0434\u043E\u0431\u0440\u0435\u043D: \u043A\u043E\u043D\u0446\u0435\u043F\u0442 "${plan.conceptTitle}".`);
+              } else {
+                this.logger.info(`[\u041E\u0442\u043A\u043B\u043E\u043D\u0435\u043D] ${clusterLabel}: ${plan.rejectionReason || "\u041D\u0435\u0442 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F"}.`);
               }
             } catch (aiErr) {
               console.error("Active note AI error:", aiErr);
-              this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 AI: ${aiErr.message}`);
+              this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 AI \u0434\u043B\u044F ${clusterLabel}: ${aiErr.message}`);
+            }
+            if (i < this.candidateClusters.length - 1 && !signal.aborted) {
+              await new Promise((r) => setTimeout(r, 1500));
             }
           }
         }

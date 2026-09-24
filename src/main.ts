@@ -303,17 +303,26 @@ export default class SemanticGardenerPlugin extends Plugin {
           this.logger.updateProgress('LLM Gatekeeper', gatekeeperPct, this.scanProgress);
           this.notifyViews();
 
+          const clusterNumber = `#${i + 1}`;
+          const sampleName = cluster.chunks[0]?.filePath?.split('/').pop()?.replace(/\.md$/, '') || '';
+          const clusterLabel = `Кластер ${clusterNumber} ("${sampleName}")`;
+
           try {
             const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
             this.refactorPlans[cluster.id] = plan;
             if (plan.isDuplicate) {
-              this.logger.success(`Кластер ${cluster.id.slice(0, 8)} одобрен: концепт "${plan.conceptTitle}".`);
+              this.logger.success(`${clusterLabel} одобрен: концепт "${plan.conceptTitle}".`);
             } else {
-              this.logger.warn(`Кластер ${cluster.id.slice(0, 8)} отклонен: ${plan.rejectionReason || 'Нет дублирования'}.`);
+              this.logger.info(`[Отклонен] ${clusterLabel}: ${plan.rejectionReason || 'Нет дублирования'}.`);
             }
           } catch (aiErr: any) {
             console.error(`AI Analysis error for cluster ${cluster.id}:`, aiErr);
-            this.logger.error(`Ошибка AI для кластера ${cluster.id.slice(0, 8)}: ${aiErr.message}`);
+            this.logger.error(`Ошибка AI для ${clusterLabel}: ${aiErr.message}`);
+          }
+
+          // Rate-limiting delay (1.5s) to stay within Gemini free-tier RPM and token limits
+          if (i < this.candidateClusters.length - 1 && !signal.aborted) {
+            await new Promise(r => setTimeout(r, 1500));
           }
         }
       } else {
@@ -439,15 +448,26 @@ export default class SemanticGardenerPlugin extends Plugin {
             const pct = 75 + Math.round(((i + 1) / this.candidateClusters.length) * 25);
             this.logger.updateProgress('LLM Gatekeeper', pct, `Анализ кластера ${i + 1}/${this.candidateClusters.length}...`);
 
+            const clusterNumber = `#${i + 1}`;
+            const sampleName = cluster.chunks[0]?.filePath?.split('/').pop()?.replace(/\.md$/, '') || '';
+            const clusterLabel = `Кластер ${clusterNumber} ("${sampleName}")`;
+
             try {
               const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
               this.refactorPlans[cluster.id] = plan;
               if (plan.isDuplicate) {
-                this.logger.success(`Кластер одобрен: концепт "${plan.conceptTitle}".`);
+                this.logger.success(`${clusterLabel} одобрен: концепт "${plan.conceptTitle}".`);
+              } else {
+                this.logger.info(`[Отклонен] ${clusterLabel}: ${plan.rejectionReason || 'Нет дублирования'}.`);
               }
             } catch (aiErr: any) {
               console.error('Active note AI error:', aiErr);
-              this.logger.error(`Ошибка AI: ${aiErr.message}`);
+              this.logger.error(`Ошибка AI для ${clusterLabel}: ${aiErr.message}`);
+            }
+
+            // Rate-limiting delay between requests
+            if (i < this.candidateClusters.length - 1 && !signal.aborted) {
+              await new Promise(r => setTimeout(r, 1500));
             }
           }
         }
