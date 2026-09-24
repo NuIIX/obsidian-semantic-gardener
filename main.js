@@ -41,6 +41,11 @@ var DEFAULT_SETTINGS = {
   geminiApiKey: "",
   geminiApiKeys: [],
   geminiModel: "gemini-3.5-flash",
+  llmProvider: "gemini",
+  localLlmEndpoint: "http://localhost:11434/v1",
+  localLlmModel: "llama3.2",
+  localLlmApiKey: "",
+  autoWatchVault: true,
   similarityThreshold: 0.82,
   minChunkLength: 40,
   conceptsFolder: "Concepts",
@@ -61,67 +66,108 @@ var SemanticGardenerSettingTab = class extends import_obsidian.PluginSettingTab 
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Semantic Gardener \u2014 \u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438" });
-    if (!this.plugin.settings.geminiApiKeys || !Array.isArray(this.plugin.settings.geminiApiKeys)) {
-      this.plugin.settings.geminiApiKeys = this.plugin.settings.geminiApiKey ? [this.plugin.settings.geminiApiKey] : [""];
-    }
-    if (this.plugin.settings.geminiApiKeys.length === 0) {
-      this.plugin.settings.geminiApiKeys = [""];
-    }
-    const keyList = this.plugin.settings.geminiApiKeys;
-    new import_obsidian.Setting(containerEl).setName("\u041A\u043B\u044E\u0447\u0438 Google AI Studio API (BYOK)").setDesc("\u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u043E\u0434\u0438\u043D \u0438\u043B\u0438 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E API-\u043A\u043B\u044E\u0447\u0435\u0439 Gemini. \u041F\u0440\u0438 \u0438\u0441\u0447\u0435\u0440\u043F\u0430\u043D\u0438\u0438 \u0441\u0443\u0442\u043E\u0447\u043D\u043E\u0433\u043E \u043B\u0438\u043C\u0438\u0442\u0430 (3 \u043E\u0448\u0438\u0431\u043A\u0438 429 \u043F\u043E\u0434\u0440\u044F\u0434) \u043F\u043B\u0430\u0433\u0438\u043D \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u0441\u044F \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u043A\u043B\u044E\u0447.").setHeading();
-    keyList.forEach((key2, index2) => {
-      const setting = new import_obsidian.Setting(containerEl).setName(index2 === 0 ? "\u041E\u0441\u043D\u043E\u0432\u043D\u043E\u0439 API-\u043A\u043B\u044E\u0447" : `\u0420\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0439 \u043A\u043B\u044E\u0447 #${index2 + 1}`).setDesc(index2 === 0 ? "\u041F\u0435\u0440\u0432\u0438\u0447\u043D\u044B\u0439 \u043A\u043B\u044E\u0447 \u0434\u043B\u044F \u0440\u0430\u0431\u043E\u0442\u044B Gatekeeper \u0438 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433\u0430." : `\u0420\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0439 \u043A\u043B\u044E\u0447 \u0434\u043B\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0440\u043E\u0442\u0430\u0446\u0438\u0438.`);
-      let textInputEl = null;
-      setting.addText((text2) => {
-        textInputEl = text2.inputEl;
-        text2.setPlaceholder("AIzaSy...").setValue(key2).onChange(async (value) => {
-          this.plugin.settings.geminiApiKeys[index2] = value.trim();
-          this.plugin.settings.geminiApiKey = this.plugin.settings.geminiApiKeys[0] || "";
-          this.plugin.geminiClient.setApiKeys(this.plugin.settings.geminiApiKeys);
+    new import_obsidian.Setting(containerEl).setName("\u041F\u0440\u043E\u0432\u0430\u0439\u0434\u0435\u0440 LLM Gatekeeper").setDesc("\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0431\u044D\u043A\u0435\u043D\u0434 \u0434\u043B\u044F \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0438 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u043F\u043B\u0430\u043D\u0430 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433\u0430.").addDropdown((dropdown) => {
+      dropdown.addOption("gemini", "Google Gemini (\u041E\u0431\u043B\u0430\u0447\u043D\u044B\u0439 AI Studio BYOK)").addOption("openai-compatible", "\u041B\u043E\u043A\u0430\u043B\u044C\u043D\u0430\u044F LLM (Ollama / LM Studio / LocalAI)").setValue(this.plugin.settings.llmProvider || "gemini").onChange(async (value) => {
+        this.plugin.settings.llmProvider = value;
+        await this.plugin.saveSettings();
+        this.display();
+      });
+    });
+    if (this.plugin.settings.llmProvider === "openai-compatible") {
+      new import_obsidian.Setting(containerEl).setName("\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u0439 LLM").setDesc("\u041F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F \u043A \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u043C\u0443 \u0441\u0435\u0440\u0432\u0435\u0440\u0443 \u043F\u043E \u043F\u0440\u043E\u0442\u043E\u043A\u043E\u043B\u0443 OpenAI Chat Completions.").setHeading();
+      new import_obsidian.Setting(containerEl).setName("API Endpoint").setDesc("URL \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u0441\u0435\u0440\u0432\u0435\u0440\u0430 (\u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, http://localhost:11434/v1 \u0434\u043B\u044F Ollama \u0438\u043B\u0438 http://localhost:1234/v1 \u0434\u043B\u044F LM Studio).").addText((text2) => {
+        text2.setPlaceholder("http://localhost:11434/v1").setValue(this.plugin.settings.localLlmEndpoint || "http://localhost:11434/v1").onChange(async (val) => {
+          this.plugin.settings.localLlmEndpoint = val.trim();
+          await this.plugin.saveSettings();
+        });
+      });
+      new import_obsidian.Setting(containerEl).setName("\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043C\u043E\u0434\u0435\u043B\u0438").setDesc("\u0418\u043C\u044F \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043D\u043E\u0439 \u043C\u043E\u0434\u0435\u043B\u0438 (\u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440: llama3.2, qwen2.5, mistral, deepseek-r1).").addText((text2) => {
+        text2.setPlaceholder("llama3.2").setValue(this.plugin.settings.localLlmModel || "llama3.2").onChange(async (val) => {
+          this.plugin.settings.localLlmModel = val.trim();
+          await this.plugin.saveSettings();
+        });
+      });
+      new import_obsidian.Setting(containerEl).setName("API-\u043A\u043B\u044E\u0447 (\u043D\u0435\u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u043E)").setDesc("\u0415\u0441\u043B\u0438 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u0441\u0435\u0440\u0432\u0435\u0440 \u0438\u043B\u0438 \u043F\u0440\u043E\u043A\u0441\u0438 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0430\u0432\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u0438 (Bearer token). \u0414\u043B\u044F Ollama/LM Studio \u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u0443\u0441\u0442\u044B\u043C.").addText((text2) => {
+        text2.setPlaceholder("\u043B\u044E\u0431\u043E\u0439-\u0442\u043E\u043A\u0435\u043D-\u0438\u043B\u0438-\u043F\u0443\u0441\u0442\u043E").setValue(this.plugin.settings.localLlmApiKey || "").onChange(async (val) => {
+          this.plugin.settings.localLlmApiKey = val.trim();
           await this.plugin.saveSettings();
         });
         text2.inputEl.type = "password";
       });
-      if (index2 === keyList.length - 1) {
-        setting.addButton((button) => {
-          button.setButtonText("+").setTooltip("\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0439 API-\u043A\u043B\u044E\u0447").setCta();
-          const canAdd = Boolean(key2 && key2.trim().length > 0);
-          button.setDisabled(!canAdd);
-          if (textInputEl) {
-            textInputEl.addEventListener("input", () => {
-              const hasText = (textInputEl?.value || "").trim().length > 0;
-              button.setDisabled(!hasText);
-            });
-          }
-          button.onClick(async () => {
-            const currentVal = this.plugin.settings.geminiApiKeys[index2]?.trim() || "";
-            if (currentVal.length === 0) return;
-            this.plugin.settings.geminiApiKeys.push("");
-            await this.plugin.saveSettings();
-            this.display();
-          });
-        });
+    } else {
+      if (!this.plugin.settings.geminiApiKeys || !Array.isArray(this.plugin.settings.geminiApiKeys)) {
+        this.plugin.settings.geminiApiKeys = this.plugin.settings.geminiApiKey ? [this.plugin.settings.geminiApiKey] : [""];
       }
-      if (keyList.length > 1) {
-        setting.addButton((button) => {
-          button.setButtonText("\u{1F5D1}").setTooltip(`\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u043A\u043B\u044E\u0447 #${index2 + 1}`).setWarning().onClick(async () => {
-            this.plugin.settings.geminiApiKeys.splice(index2, 1);
-            if (this.plugin.settings.geminiApiKeys.length === 0) {
-              this.plugin.settings.geminiApiKeys.push("");
-            }
+      if (this.plugin.settings.geminiApiKeys.length === 0) {
+        this.plugin.settings.geminiApiKeys = [""];
+      }
+      const keyList = this.plugin.settings.geminiApiKeys;
+      new import_obsidian.Setting(containerEl).setName("\u041A\u043B\u044E\u0447\u0438 Google AI Studio API (BYOK)").setDesc("\u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u043E\u0434\u0438\u043D \u0438\u043B\u0438 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E API-\u043A\u043B\u044E\u0447\u0435\u0439 Gemini. \u041F\u0440\u0438 \u0438\u0441\u0447\u0435\u0440\u043F\u0430\u043D\u0438\u0438 \u0441\u0443\u0442\u043E\u0447\u043D\u043E\u0433\u043E \u043B\u0438\u043C\u0438\u0442\u0430 (3 \u043E\u0448\u0438\u0431\u043A\u0438 429 \u043F\u043E\u0434\u0440\u044F\u0434) \u043F\u043B\u0430\u0433\u0438\u043D \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u0441\u044F \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u043A\u043B\u044E\u0447.").setHeading();
+      keyList.forEach((key2, index2) => {
+        const setting = new import_obsidian.Setting(containerEl).setName(index2 === 0 ? "\u041E\u0441\u043D\u043E\u0432\u043D\u043E\u0439 API-\u043A\u043B\u044E\u0447" : `\u0420\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0439 \u043A\u043B\u044E\u0447 #${index2 + 1}`).setDesc(index2 === 0 ? "\u041F\u0435\u0440\u0432\u0438\u0447\u043D\u044B\u0439 \u043A\u043B\u044E\u0447 \u0434\u043B\u044F \u0440\u0430\u0431\u043E\u0442\u044B Gatekeeper \u0438 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433\u0430." : `\u0420\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0439 \u043A\u043B\u044E\u0447 \u0434\u043B\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0440\u043E\u0442\u0430\u0446\u0438\u0438.`);
+        let textInputEl = null;
+        setting.addText((text2) => {
+          textInputEl = text2.inputEl;
+          text2.setPlaceholder("AIzaSy...").setValue(key2).onChange(async (value) => {
+            this.plugin.settings.geminiApiKeys[index2] = value.trim();
             this.plugin.settings.geminiApiKey = this.plugin.settings.geminiApiKeys[0] || "";
             this.plugin.geminiClient.setApiKeys(this.plugin.settings.geminiApiKeys);
             await this.plugin.saveSettings();
-            this.display();
           });
+          text2.inputEl.type = "password";
         });
-      }
-    });
-    new import_obsidian.Setting(containerEl).setName("\u041C\u043E\u0434\u0435\u043B\u044C Gemini").setDesc("\u041C\u043E\u0434\u0435\u043B\u044C \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u043E\u0432 \u0438 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0437\u0430\u043C\u0435\u043D.").addDropdown((dropdown) => {
-      dropdown.addOption("gemini-3.5-flash", "Gemini 3.5 Flash (\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F)").addOption("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite").addOption("gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite").addOption("gemini-3.8-flash", "Gemini 3.8 Flash").addOption("gemini-3.7-flash", "Gemini 3.7 Flash").addOption("gemini-3.6-flash", "Gemini 3.6 Flash").addOption("gemini-2.5-flash", "Gemini 2.5 Flash").setValue(this.plugin.settings.geminiModel).onChange(async (value) => {
-        this.plugin.settings.geminiModel = value;
-        this.plugin.geminiClient.setModel(value);
+        if (index2 === keyList.length - 1) {
+          setting.addButton((button) => {
+            button.setButtonText("+").setTooltip("\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0439 API-\u043A\u043B\u044E\u0447").setCta();
+            const canAdd = Boolean(key2 && key2.trim().length > 0);
+            button.setDisabled(!canAdd);
+            if (textInputEl) {
+              textInputEl.addEventListener("input", () => {
+                const hasText = (textInputEl?.value || "").trim().length > 0;
+                button.setDisabled(!hasText);
+              });
+            }
+            button.onClick(async () => {
+              const currentVal = this.plugin.settings.geminiApiKeys[index2]?.trim() || "";
+              if (currentVal.length === 0) return;
+              this.plugin.settings.geminiApiKeys.push("");
+              await this.plugin.saveSettings();
+              this.display();
+            });
+          });
+        }
+        if (keyList.length > 1) {
+          setting.addButton((button) => {
+            button.setButtonText("\u{1F5D1}").setTooltip(`\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u043A\u043B\u044E\u0447 #${index2 + 1}`).setWarning().onClick(async () => {
+              this.plugin.settings.geminiApiKeys.splice(index2, 1);
+              if (this.plugin.settings.geminiApiKeys.length === 0) {
+                this.plugin.settings.geminiApiKeys.push("");
+              }
+              this.plugin.settings.geminiApiKey = this.plugin.settings.geminiApiKeys[0] || "";
+              this.plugin.geminiClient.setApiKeys(this.plugin.settings.geminiApiKeys);
+              await this.plugin.saveSettings();
+              this.display();
+            });
+          });
+        }
+      });
+      new import_obsidian.Setting(containerEl).setName("\u041C\u043E\u0434\u0435\u043B\u044C Gemini").setDesc("\u041C\u043E\u0434\u0435\u043B\u044C \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u043E\u0432 \u0438 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0437\u0430\u043C\u0435\u043D.").addDropdown((dropdown) => {
+        dropdown.addOption("gemini-3.5-flash", "Gemini 3.5 Flash (\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F)").addOption("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite").addOption("gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite").addOption("gemini-3.8-flash", "Gemini 3.8 Flash").addOption("gemini-3.7-flash", "Gemini 3.7 Flash").addOption("gemini-3.6-flash", "Gemini 3.6 Flash").addOption("gemini-2.5-flash", "Gemini 2.5 Flash").setValue(this.plugin.settings.geminiModel).onChange(async (value) => {
+          this.plugin.settings.geminiModel = value;
+          this.plugin.geminiClient.setModel(value);
+          await this.plugin.saveSettings();
+        });
+      });
+    }
+    new import_obsidian.Setting(containerEl).setName("\u0424\u043E\u043D\u043E\u0432\u044B\u0439 Vault Watcher").setDesc("\u0410\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u043E\u0442\u0441\u043B\u0435\u0436\u0438\u0432\u0430\u0442\u044C \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u0437\u0430\u043C\u0435\u0442\u043E\u043A \u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0442\u044C \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u044B\u0439 \u043A\u044D\u0448 \u0432 \u0444\u043E\u043D\u0435 \u0441 \u0437\u0430\u0434\u0435\u0440\u0436\u043A\u043E\u0439 (debounced 2.5\u0441).").addToggle((toggle) => {
+      toggle.setValue(this.plugin.settings.autoWatchVault ?? true).onChange(async (value) => {
+        this.plugin.settings.autoWatchVault = value;
         await this.plugin.saveSettings();
+        if (value) {
+          this.plugin.vaultWatcher?.start();
+        } else {
+          this.plugin.vaultWatcher?.stop();
+        }
       });
     });
     new import_obsidian.Setting(containerEl).setName("\u041F\u043E\u0440\u043E\u0433 \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u0430").setDesc(`\u041C\u0438\u043D\u0438\u043C\u0430\u043B\u044C\u043D\u043E\u0435 \u043A\u043E\u0441\u0438\u043D\u0443\u0441\u043D\u043E\u0435 \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u043E \u0432\u0435\u043A\u0442\u043E\u0440\u043E\u0432 \u0434\u043B\u044F \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u0432 \u043A\u043B\u0430\u0441\u0442\u0435\u0440 (\u0422\u0435\u043A\u0443\u0449\u0435\u0435: ${this.plugin.settings.similarityThreshold}). \u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F: 0.80 - 0.85.`).addSlider((slider) => {
@@ -10007,6 +10053,159 @@ ${clusterPromptPayload}`;
   }
 };
 
+// src/ai/local-llm-client.ts
+var LocalLlmClient = class {
+  endpoint;
+  model;
+  apiKey;
+  constructor(endpoint = "http://localhost:11434/v1", model = "llama3.2", apiKey = "") {
+    this.endpoint = endpoint.replace(/\/+$/, "");
+    this.model = model || "llama3.2";
+    this.apiKey = apiKey || "";
+  }
+  updateConfig(endpoint, model, apiKey = "") {
+    this.endpoint = endpoint.replace(/\/+$/, "");
+    this.model = model || "llama3.2";
+    this.apiKey = apiKey || "";
+  }
+  async validateAndRefactorCluster(cluster) {
+    const clusterPromptPayload = cluster.chunks.map((chunk, idx) => {
+      return `--- \u0424\u0420\u0410\u0413\u041C\u0415\u041D\u0422 #${idx + 1} ---
+\u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442: ${chunk.breadcrumbs}
+\u0424\u0430\u0439\u043B: ${chunk.filePath}
+\u0422\u0435\u043A\u0441\u0442 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430:
+${chunk.text}
+`;
+    }).join("\n\n");
+    const promptText = `\u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0438\u0437\u0438\u0440\u0443\u0439 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 ${cluster.chunks.length} \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0445 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u043E\u0432 \u0438\u0437 \u0440\u0430\u0437\u043D\u044B\u0445 \u0437\u0430\u043C\u0435\u0442\u043E\u043A \u043D\u0430 \u043F\u0440\u0435\u0434\u043C\u0435\u0442 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F \u043A\u043E\u043D\u0446\u0435\u043F\u0446\u0438\u0438:
+
+${clusterPromptPayload}
+
+\u0421\u0442\u0440\u043E\u0433\u043E \u0432\u0435\u0440\u043D\u0438 \u0432\u0430\u043B\u0438\u0434\u043D\u044B\u0439 JSON \u043E\u0431\u044A\u0435\u043A\u0442 \u0441\u043E \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043E\u0439:
+{
+  "isDuplicate": true \u0438\u043B\u0438 false,
+  "conceptTitle": "\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043A\u0430\u043D\u043E\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 (\u0435\u0441\u043B\u0438 isDuplicate true)",
+  "aliases": ["\u0441\u0438\u043D\u043E\u043D\u0438\u043C 1", "\u0441\u0438\u043D\u043E\u043D\u0438\u043C 2"],
+  "canonicalNoteMarkdown": "\u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0432\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0432 Markdown",
+  "modifications": [
+    {
+      "filePath": "\u043F\u0443\u0442\u044C \u043A \u0444\u0430\u0439\u043B\u0443",
+      "originalSpan": "\u0442\u043E\u0447\u043D\u044B\u0439 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442 \u0434\u043B\u044F \u0437\u0430\u043C\u0435\u043D\u044B",
+      "suggestedInlineSpan": "[[conceptTitle]] \u0438\u043B\u0438 [[conceptTitle|\u0430\u043B\u0438\u0430\u0441]]",
+      "transclusionSpan": "![[conceptTitle]]"
+    }
+  ],
+  "rejectionReason": "\u043F\u0440\u0438\u0447\u0438\u043D\u0430 \u043E\u0442\u043A\u0430\u0437\u0430 (\u0435\u0441\u043B\u0438 isDuplicate false)"
+}`;
+    const headers = {
+      "Content-Type": "application/json"
+    };
+    if (this.apiKey.trim().length > 0) {
+      headers["Authorization"] = `Bearer ${this.apiKey.trim()}`;
+    }
+    const url = `${this.endpoint}/chat/completions`;
+    const body = {
+      model: this.model,
+      messages: [
+        {
+          role: "system",
+          content: `\u0422\u044B \u2014 \u0441\u0442\u0440\u043E\u0433\u0438\u0439 \u0440\u0435\u0434\u0430\u043A\u0442\u043E\u0440 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0439 \u0431\u0430\u0437\u044B \u0437\u043D\u0430\u043D\u0438\u0439 Zettelkasten. \u0422\u0432\u043E\u044F \u0446\u0435\u043B\u044C \u2014 \u043A\u043E\u043D\u0441\u043E\u043B\u0438\u0434\u0430\u0446\u0438\u044F \u0434\u0443\u0431\u043B\u0438\u0440\u0443\u044E\u0449\u0438\u0445\u0441\u044F \u043A\u043E\u043D\u0446\u0435\u043F\u0446\u0438\u0439.
+\u041A\u0420\u0418\u0422\u0415\u0420\u0418\u0419 \u0414\u0415\u0414\u0423\u041F\u041B\u0418\u041A\u0410\u0426\u0418\u0418:
+\u041E\u0431\u044A\u0435\u0434\u0438\u043D\u044F\u0439 \u0422\u041E\u041B\u042C\u041A\u041E \u043A\u043E\u043D\u0446\u0435\u043F\u0446\u0438\u0438 \u0441 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u043C \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u043C \u0438\u043B\u0438 \u0430\u0431\u0441\u0442\u0440\u0430\u043A\u0442\u043D\u044B\u043C \u0441\u043C\u044B\u0441\u043B\u043E\u043C.
+\u0417\u0410\u041F\u0420\u0415\u0429\u0415\u041D\u041E \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u044F\u0442\u044C \u043E\u043C\u043E\u043D\u0438\u043C\u044B \u0438 \u043C\u0435\u0442\u0430\u0444\u043E\u0440\u044B \u0438\u0437 \u0440\u0430\u0437\u043D\u044B\u0445 \u0434\u043E\u043C\u0435\u043D\u043E\u0432.
+\u0415\u0441\u043B\u0438 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u043E, \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u0438 isDuplicate: true, \u0441\u0444\u043E\u0440\u043C\u0443\u043B\u0438\u0440\u0443\u0439 conceptTitle, aliases, canonicalNoteMarkdown \u0438 modifications (\u043F\u043E \u043E\u0434\u043D\u043E\u0439 \u0442\u043E\u0447\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u043D\u0435 originalSpan \u0434\u043B\u044F \u041A\u0410\u0416\u0414\u041E\u0413\u041E \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430).
+\u0415\u0441\u043B\u0438 \u043D\u0435\u0442, \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u0438 isDuplicate: false \u0438 \u0443\u043A\u0430\u0436\u0438 rejectionReason.
+\u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u0418\u0421\u041A\u041B\u042E\u0427\u0418\u0422\u0415\u041B\u042C\u041D\u041E \u0432\u0430\u043B\u0438\u0434\u043D\u044B\u043C JSON.`
+        },
+        {
+          role: "user",
+          content: promptText
+        }
+      ],
+      temperature: 0.1,
+      response_format: { type: "json_object" }
+    };
+    let response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body)
+      });
+    } catch (err) {
+      throw new Error(`\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\u0441\u044F \u043A \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u0439 LLM (${url}): ${err.message}. \u0423\u0431\u0435\u0434\u0438\u0442\u0435\u0441\u044C, \u0447\u0442\u043E Ollama \u0438\u043B\u0438 LM Studio \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u044B.`);
+    }
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043E\u0442\u0432\u0435\u0442\u0430 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u0439 LLM (${response.status}): ${errText}`);
+    }
+    const data = await response.json();
+    const rawText = data?.choices?.[0]?.message?.content;
+    if (!rawText) {
+      throw new Error("\u041F\u0443\u0441\u0442\u043E\u0439 \u043E\u0442\u0432\u0435\u0442 \u043E\u0442 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u0439 LLM.");
+    }
+    let parsed;
+    try {
+      let sanitized = rawText.trim();
+      if (sanitized.startsWith("```json")) sanitized = sanitized.slice(7);
+      if (sanitized.startsWith("```")) sanitized = sanitized.slice(3);
+      if (sanitized.endsWith("```")) sanitized = sanitized.slice(0, -3);
+      sanitized = sanitized.trim();
+      parsed = JSON.parse(sanitized);
+    } catch (e) {
+      throw new Error(`\u041B\u043E\u043A\u0430\u043B\u044C\u043D\u0430\u044F LLM \u0432\u0435\u0440\u043D\u0443\u043B\u0430 \u043D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 JSON: ${e.message}. \u041E\u0442\u0432\u0435\u0442: ${rawText.slice(0, 300)}`);
+    }
+    const modifications = [];
+    if (parsed.isDuplicate) {
+      if (parsed.modifications && Array.isArray(parsed.modifications)) {
+        for (const mod of parsed.modifications) {
+          const chunk = cluster.chunks.find((c) => c.filePath === mod.filePath);
+          let validOriginalSpan = mod.originalSpan;
+          if (chunk && !chunk.text.includes(validOriginalSpan)) {
+            const trimmed = validOriginalSpan.trim();
+            if (chunk.text.includes(trimmed)) {
+              validOriginalSpan = trimmed;
+            }
+          }
+          modifications.push({
+            filePath: mod.filePath,
+            originalSpan: validOriginalSpan,
+            suggestedInlineSpan: mod.suggestedInlineSpan,
+            transclusionSpan: mod.transclusionSpan,
+            selectedMode: "inline"
+          });
+        }
+      }
+      if (modifications.length === 0) {
+        const safeTitle = parsed.conceptTitle?.replace(/[:/\\*?"<>|]/g, "").trim() || "\u041D\u043E\u0432\u0430\u044F \u043A\u043E\u043D\u0446\u0435\u043F\u0446\u0438\u044F";
+        for (const chunk of cluster.chunks) {
+          const firstLine = chunk.text.split("\n").map((l) => l.trim()).find((l) => l.length > 0) || chunk.text.slice(0, 80);
+          modifications.push({
+            filePath: chunk.filePath,
+            originalSpan: firstLine,
+            suggestedInlineSpan: `[[${safeTitle}]]`,
+            transclusionSpan: `![[${safeTitle}]]`,
+            selectedMode: "inline"
+          });
+        }
+      }
+    }
+    const rawAliases = Array.isArray(parsed.aliases) ? parsed.aliases : [];
+    const aliases = rawAliases.filter((a) => typeof a === "string" && a.trim().length > 0).map((a) => a.trim().replace(/[:/\\*?"<>|]/g, ""));
+    const uniqueAliases = Array.from(new Set(aliases));
+    return {
+      id: `plan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      clusterId: cluster.id,
+      isDuplicate: parsed.isDuplicate,
+      rejectionReason: parsed.isDuplicate ? "" : parsed.rejectionReason || "\u041E\u0442\u043A\u043B\u043E\u043D\u0435\u043D\u043E \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u0439 LLM",
+      conceptTitle: parsed.conceptTitle?.replace(/[:/\\*?"<>|]/g, "").trim(),
+      aliases: uniqueAliases.length > 0 ? uniqueAliases : void 0,
+      canonicalNoteMarkdown: parsed.canonicalNoteMarkdown,
+      modifications
+    };
+  }
+};
+
 // src/ai/worker-client.ts
 var import_obsidian3 = require("obsidian");
 var WorkerClient = class {
@@ -10249,492 +10448,8 @@ Stack: ${err?.error?.stack || "N/A"}`;
   }
 };
 
-// src/core/parser.ts
-function parseMarkdown(filePath, content) {
-  const lines = content.split(/\r?\n/);
-  const nodes = [];
-  let inFrontmatter = false;
-  let inCodeBlock = false;
-  let codeFenceChar = "";
-  let inHtmlComment = false;
-  let currentBlockType = null;
-  let currentBlockLines = [];
-  let currentStartLine = 1;
-  let currentLevel = void 0;
-  function flushCurrentBlock(endLine) {
-    if (!currentBlockType || currentBlockLines.length === 0) {
-      currentBlockType = null;
-      currentBlockLines = [];
-      return;
-    }
-    const rawText = currentBlockLines.join("\n").trim();
-    if (rawText.length > 0) {
-      nodes.push({
-        type: currentBlockType,
-        level: currentLevel,
-        text: rawText,
-        startLine: currentStartLine,
-        endLine: Math.max(currentStartLine, endLine)
-      });
-    }
-    currentBlockType = null;
-    currentBlockLines = [];
-    currentLevel = void 0;
-  }
-  for (let i = 0; i < lines.length; i++) {
-    const lineNum = i + 1;
-    const line = lines[i];
-    const trimmed = line.trim();
-    if (i === 0 && (trimmed === "---" || trimmed === "+++")) {
-      inFrontmatter = true;
-      continue;
-    }
-    if (inFrontmatter) {
-      if (trimmed === "---" || trimmed === "+++") {
-        inFrontmatter = false;
-      }
-      continue;
-    }
-    if (!inCodeBlock && trimmed.startsWith("<!--")) {
-      inHtmlComment = true;
-    }
-    if (inHtmlComment) {
-      if (trimmed.includes("-->")) {
-        inHtmlComment = false;
-      }
-      continue;
-    }
-    const codeFenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
-    if (codeFenceMatch) {
-      const fence = codeFenceMatch[1];
-      if (!inCodeBlock) {
-        flushCurrentBlock(lineNum - 1);
-        inCodeBlock = true;
-        codeFenceChar = fence[0];
-        continue;
-      } else if (fence.startsWith(codeFenceChar)) {
-        inCodeBlock = false;
-        codeFenceChar = "";
-        continue;
-      }
-    }
-    if (inCodeBlock) {
-      continue;
-    }
-    if (trimmed.length === 0) {
-      flushCurrentBlock(lineNum - 1);
-      continue;
-    }
-    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
-    if (headingMatch) {
-      flushCurrentBlock(lineNum - 1);
-      const level = headingMatch[1].length;
-      const headingText = headingMatch[2].trim();
-      nodes.push({
-        type: "heading",
-        level,
-        text: headingText,
-        startLine: lineNum,
-        endLine: lineNum
-      });
-      continue;
-    }
-    if (trimmed.startsWith(">")) {
-      if (currentBlockType !== "blockquote") {
-        flushCurrentBlock(lineNum - 1);
-        currentBlockType = "blockquote";
-        currentStartLine = lineNum;
-      }
-      currentBlockLines.push(line.replace(/^>\s?/, ""));
-      continue;
-    }
-    const listMatch = line.match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
-    if (listMatch) {
-      if (currentBlockType !== "list_item" && currentBlockType !== "paragraph") {
-        flushCurrentBlock(lineNum - 1);
-        currentBlockType = "list_item";
-        currentStartLine = lineNum;
-      } else if (currentBlockType === null) {
-        currentBlockType = "list_item";
-        currentStartLine = lineNum;
-      }
-      currentBlockLines.push(line);
-      continue;
-    }
-    if (currentBlockType === null) {
-      currentBlockType = "paragraph";
-      currentStartLine = lineNum;
-    }
-    currentBlockLines.push(line);
-  }
-  flushCurrentBlock(lines.length);
-  return {
-    filePath,
-    nodes
-  };
-}
-
-// src/core/hasher.ts
-async function sha256(text2) {
-  const enc = new TextEncoder();
-  const data = enc.encode(text2);
-  if (typeof crypto !== "undefined" && crypto.subtle && typeof crypto.subtle.digest === "function") {
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-  }
-  try {
-    const nodeCrypto = await import("crypto");
-    return nodeCrypto.createHash("sha256").update(text2).digest("hex");
-  } catch {
-    let h1 = 2166136261;
-    let h2 = 16777619;
-    for (let i = 0; i < text2.length; i++) {
-      const ch = text2.charCodeAt(i);
-      h1 = Math.imul(h1 ^ ch, 16777619);
-      h2 = Math.imul(h2 ^ ch >> 8, 16777619);
-    }
-    return (h1 >>> 0).toString(16).padStart(8, "0") + (h2 >>> 0).toString(16).padStart(8, "0");
-  }
-}
-
-// src/core/chunker.ts
-async function chunkMarkdown(filePath, content, options = {}) {
-  const minLength = options.minChunkLength ?? 40;
-  const parsed = parseMarkdown(filePath, content);
-  const chunks = [];
-  const headingStack = [];
-  for (const node of parsed.nodes) {
-    if (node.type === "heading") {
-      const level = node.level || 1;
-      while (headingStack.length > 0 && headingStack[headingStack.length - 1].level >= level) {
-        headingStack.pop();
-      }
-      headingStack.push({ level, text: node.text });
-      continue;
-    }
-    const cleanText = node.text.trim();
-    if (cleanText.length < minLength) {
-      continue;
-    }
-    const strippedLinks = cleanText.replace(/\[\[[^\]]+\]\]/g, "").replace(/https?:\/\/\S+/g, "").trim();
-    if (strippedLinks.length < 15) {
-      continue;
-    }
-    const breadcrumbSegments = [filePath, ...headingStack.map((h) => h.text)];
-    const breadcrumbs = `[${breadcrumbSegments.join(" > ")}]`;
-    const fullContext = `${breadcrumbs}
-${cleanText}`;
-    const hash2 = await sha256(cleanText);
-    chunks.push({
-      id: hash2,
-      filePath,
-      text: cleanText,
-      breadcrumbs,
-      fullContext,
-      startLine: node.startLine,
-      endLine: node.endLine
-    });
-  }
-  return chunks;
-}
-
-// src/ai/vector-search.ts
-function normalizeVector(vec) {
-  let sumSq = 0;
-  for (let i = 0; i < vec.length; i++) {
-    sumSq += vec[i] * vec[i];
-  }
-  if (sumSq === 0) return vec;
-  const norm = Math.sqrt(sumSq);
-  if (Math.abs(norm - 1) < 1e-5) return vec;
-  const out = new Float32Array(vec.length);
-  const invNorm = 1 / norm;
-  for (let i = 0; i < vec.length; i++) {
-    out[i] = vec[i] * invNorm;
-  }
-  return out;
-}
-function getDomainFromPath(filePath) {
-  const normalized = filePath.replace(/\\/g, "/").replace(/^\/+/, "");
-  const firstSlash = normalized.indexOf("/");
-  if (firstSlash === -1) {
-    return "(Root)";
-  }
-  return normalized.substring(0, firstSlash);
-}
-var FlatVectorMatrix = class {
-  count;
-  dim;
-  data;
-  chunks;
-  constructor(validChunks) {
-    this.chunks = validChunks;
-    this.count = validChunks.length;
-    this.dim = validChunks[0]?.embedding?.length || 0;
-    this.data = new Float32Array(this.count * this.dim);
-    for (let i = 0; i < this.count; i++) {
-      const emb = normalizeVector(this.chunks[i].embedding);
-      this.data.set(emb, i * this.dim);
-    }
-  }
-  /**
-   * Fast dot product of row i and row j in contiguous memory buffer.
-   */
-  dotAt(i, j) {
-    const offA = i * this.dim;
-    const offB = j * this.dim;
-    let dot = 0;
-    const d = this.dim;
-    for (let k = 0; k < d; k++) {
-      dot += this.data[offA + k] * this.data[offB + k];
-    }
-    return dot;
-  }
-};
-function findCandidateClusters(chunks, threshold = 0.82) {
-  const validChunks = chunks.filter((c) => c.embedding && c.embedding.length > 0);
-  if (validChunks.length < 2) {
-    return [];
-  }
-  const matrix = new FlatVectorMatrix(validChunks);
-  const n = matrix.count;
-  const adj = /* @__PURE__ */ new Map();
-  for (let i = 0; i < n; i++) {
-    adj.set(i, /* @__PURE__ */ new Set());
-  }
-  const pairScores = /* @__PURE__ */ new Map();
-  for (let i = 0; i < n; i++) {
-    const pathA = validChunks[i].filePath;
-    for (let j = i + 1; j < n; j++) {
-      if (pathA === validChunks[j].filePath) {
-        continue;
-      }
-      const sim = matrix.dotAt(i, j);
-      if (sim >= threshold) {
-        adj.get(i).add(j);
-        adj.get(j).add(i);
-        const pairKey = `${i}_${j}`;
-        pairScores.set(pairKey, sim);
-      }
-    }
-  }
-  const visited = /* @__PURE__ */ new Set();
-  const rawClusters = [];
-  for (let i = 0; i < n; i++) {
-    if (visited.has(i) || adj.get(i).size === 0) {
-      continue;
-    }
-    const component2 = [];
-    const queue = [i];
-    visited.add(i);
-    while (queue.length > 0) {
-      const curr = queue.shift();
-      component2.push(curr);
-      for (const neighbor of adj.get(curr)) {
-        if (!visited.has(neighbor)) {
-          visited.add(neighbor);
-          queue.push(neighbor);
-        }
-      }
-    }
-    if (component2.length >= 2) {
-      rawClusters.push(component2);
-    }
-  }
-  const candidateClusters = rawClusters.map((indices, idx) => {
-    const clusterChunks = indices.map((i) => validChunks[i]);
-    let maxSim = 0;
-    let sumSim = 0;
-    let pairCount = 0;
-    for (let a = 0; a < indices.length; a++) {
-      for (let b = a + 1; b < indices.length; b++) {
-        const i = indices[a];
-        const j = indices[b];
-        const pairKey = i < j ? `${i}_${j}` : `${j}_${i}`;
-        const sim = pairScores.get(pairKey);
-        if (sim !== void 0) {
-          maxSim = Math.max(maxSim, sim);
-          sumSim += sim;
-          pairCount++;
-        }
-      }
-    }
-    const avgSim = pairCount > 0 ? sumSim / pairCount : maxSim;
-    const domains = Array.from(new Set(clusterChunks.map((c) => getDomainFromPath(c.filePath))));
-    const domain = domains.length === 1 ? domains[0] : "Cross-folder";
-    return {
-      id: `cluster-${idx + 1}-${Date.now()}`,
-      similarity: Number(avgSim.toFixed(4)),
-      chunks: clusterChunks,
-      domain
-    };
-  });
-  candidateClusters.sort((a, b) => b.similarity - a.similarity);
-  return candidateClusters;
-}
-function findClustersForNote(notePath, chunks, threshold = 0.82) {
-  const validChunks = chunks.filter((c) => c.embedding && c.embedding.length > 0);
-  if (validChunks.length < 2) {
-    return [];
-  }
-  const noteIndices = [];
-  const otherIndices = [];
-  for (let i = 0; i < validChunks.length; i++) {
-    if (validChunks[i].filePath === notePath) {
-      noteIndices.push(i);
-    } else {
-      otherIndices.push(i);
-    }
-  }
-  if (noteIndices.length === 0 || otherIndices.length === 0) {
-    return [];
-  }
-  const matrix = new FlatVectorMatrix(validChunks);
-  const adj = /* @__PURE__ */ new Map();
-  for (let i = 0; i < validChunks.length; i++) {
-    adj.set(i, /* @__PURE__ */ new Set());
-  }
-  const pairScores = /* @__PURE__ */ new Map();
-  for (const i of noteIndices) {
-    for (const j of otherIndices) {
-      const sim = matrix.dotAt(i, j);
-      if (sim >= threshold) {
-        adj.get(i).add(j);
-        adj.get(j).add(i);
-        const pairKey = i < j ? `${i}_${j}` : `${j}_${i}`;
-        pairScores.set(pairKey, sim);
-      }
-    }
-  }
-  const visited = /* @__PURE__ */ new Set();
-  const rawClusters = [];
-  for (const startIdx of noteIndices) {
-    if (visited.has(startIdx) || adj.get(startIdx).size === 0) {
-      continue;
-    }
-    const component2 = [];
-    const queue = [startIdx];
-    visited.add(startIdx);
-    while (queue.length > 0) {
-      const curr = queue.shift();
-      component2.push(curr);
-      for (const neighbor of adj.get(curr)) {
-        if (!visited.has(neighbor)) {
-          visited.add(neighbor);
-          queue.push(neighbor);
-        }
-      }
-    }
-    if (component2.length >= 2) {
-      rawClusters.push(component2);
-    }
-  }
-  const candidateClusters = rawClusters.map((indices, idx) => {
-    const clusterChunks = indices.map((i) => validChunks[i]);
-    let maxSim = 0;
-    let sumSim = 0;
-    let pairCount = 0;
-    for (let a = 0; a < indices.length; a++) {
-      for (let b = a + 1; b < indices.length; b++) {
-        const i = indices[a];
-        const j = indices[b];
-        const pairKey = i < j ? `${i}_${j}` : `${j}_${i}`;
-        const sim = pairScores.get(pairKey);
-        if (sim !== void 0) {
-          maxSim = Math.max(maxSim, sim);
-          sumSim += sim;
-          pairCount++;
-        }
-      }
-    }
-    const avgSim = pairCount > 0 ? sumSim / pairCount : maxSim;
-    const domains = Array.from(new Set(clusterChunks.map((c) => getDomainFromPath(c.filePath))));
-    const domain = domains.length === 1 ? domains[0] : "Cross-folder";
-    return {
-      id: `cluster-${idx + 1}-${Date.now()}`,
-      similarity: Number(avgSim.toFixed(4)),
-      chunks: clusterChunks,
-      domain
-    };
-  });
-  candidateClusters.sort((a, b) => b.similarity - a.similarity);
-  return candidateClusters;
-}
-
-// src/utils/vault-mutator.ts
+// src/core/vault-watcher.ts
 var import_obsidian4 = require("obsidian");
-async function ensureFolderExists(app, folderPath) {
-  const normalized = (0, import_obsidian4.normalizePath)(folderPath).trim();
-  if (!normalized || normalized === "/" || normalized === ".") {
-    return;
-  }
-  const parts = normalized.split("/").filter((p) => p.length > 0);
-  let currentPath = "";
-  for (const part of parts) {
-    currentPath = currentPath ? `${currentPath}/${part}` : part;
-    const exists = await app.vault.adapter.exists(currentPath);
-    if (!exists) {
-      try {
-        await app.vault.createFolder(currentPath);
-      } catch (err) {
-        if (!err.message?.includes("already exists")) {
-          throw err;
-        }
-      }
-    }
-  }
-}
-function getMarkdownFiles(app, excludedFolders = []) {
-  const normalizedExcludes = excludedFolders.map((f) => (0, import_obsidian4.normalizePath)(f.trim())).filter((f) => f.length > 0);
-  return app.vault.getMarkdownFiles().filter((file) => {
-    if (file.name.endsWith(".excalidraw.md") || file.path.endsWith(".excalidraw.md")) {
-      return false;
-    }
-    const filePath = (0, import_obsidian4.normalizePath)(file.path);
-    for (const excluded of normalizedExcludes) {
-      if (filePath.startsWith(excluded)) {
-        return false;
-      }
-    }
-    return true;
-  });
-}
-function sanitizeNoteTitle(title) {
-  return title.replace(/[:/\\*?"<>|#^\[\]]/g, "").trim();
-}
-function ensureFrontmatterAliases(content, aliases) {
-  if (!aliases || aliases.length === 0) {
-    return content;
-  }
-  const cleanAliases = Array.from(new Set(
-    aliases.map((a) => a.trim().replace(/[:/\\*?"<>|#^\[\]]/g, "")).filter((a) => a.length > 0)
-  ));
-  if (cleanAliases.length === 0) {
-    return content;
-  }
-  const frontmatterRegex = /^---\r?\n([\s\S]*?)\r?\n---/;
-  const match = content.match(frontmatterRegex);
-  const formattedAliases = cleanAliases.map((a) => `  - "${a.replace(/"/g, '\\"')}"`).join("\n");
-  if (match) {
-    const yamlBody = match[1];
-    if (/aliases\s*:/i.test(yamlBody)) {
-      return content;
-    }
-    const updatedYaml = `${yamlBody.trimEnd()}
-aliases:
-${formattedAliases}`;
-    return content.replace(frontmatterRegex, `---
-${updatedYaml}
----`);
-  }
-  return `---
-aliases:
-${formattedAliases}
----
-
-${content.trimStart()}`;
-}
 
 // src/core/logger.ts
 var LoggerService = class _LoggerService {
@@ -11038,13 +10753,622 @@ Target Plugin: ${this.pluginId} | Log: ${this.logFilePath}
   }
 };
 
+// src/core/parser.ts
+function parseMarkdown(filePath, content) {
+  const lines = content.split(/\r?\n/);
+  const nodes = [];
+  let inFrontmatter = false;
+  let inCodeBlock = false;
+  let codeFenceChar = "";
+  let inHtmlComment = false;
+  let currentBlockType = null;
+  let currentBlockLines = [];
+  let currentStartLine = 1;
+  let currentLevel = void 0;
+  function flushCurrentBlock(endLine) {
+    if (!currentBlockType || currentBlockLines.length === 0) {
+      currentBlockType = null;
+      currentBlockLines = [];
+      return;
+    }
+    const rawText = currentBlockLines.join("\n").trim();
+    if (rawText.length > 0) {
+      nodes.push({
+        type: currentBlockType,
+        level: currentLevel,
+        text: rawText,
+        startLine: currentStartLine,
+        endLine: Math.max(currentStartLine, endLine)
+      });
+    }
+    currentBlockType = null;
+    currentBlockLines = [];
+    currentLevel = void 0;
+  }
+  for (let i = 0; i < lines.length; i++) {
+    const lineNum = i + 1;
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (i === 0 && (trimmed === "---" || trimmed === "+++")) {
+      inFrontmatter = true;
+      continue;
+    }
+    if (inFrontmatter) {
+      if (trimmed === "---" || trimmed === "+++") {
+        inFrontmatter = false;
+      }
+      continue;
+    }
+    if (!inCodeBlock && trimmed.startsWith("<!--")) {
+      inHtmlComment = true;
+    }
+    if (inHtmlComment) {
+      if (trimmed.includes("-->")) {
+        inHtmlComment = false;
+      }
+      continue;
+    }
+    const codeFenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
+    if (codeFenceMatch) {
+      const fence = codeFenceMatch[1];
+      if (!inCodeBlock) {
+        flushCurrentBlock(lineNum - 1);
+        inCodeBlock = true;
+        codeFenceChar = fence[0];
+        continue;
+      } else if (fence.startsWith(codeFenceChar)) {
+        inCodeBlock = false;
+        codeFenceChar = "";
+        continue;
+      }
+    }
+    if (inCodeBlock) {
+      continue;
+    }
+    if (trimmed.length === 0) {
+      flushCurrentBlock(lineNum - 1);
+      continue;
+    }
+    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
+    if (headingMatch) {
+      flushCurrentBlock(lineNum - 1);
+      const level = headingMatch[1].length;
+      const headingText = headingMatch[2].trim();
+      nodes.push({
+        type: "heading",
+        level,
+        text: headingText,
+        startLine: lineNum,
+        endLine: lineNum
+      });
+      continue;
+    }
+    if (trimmed.startsWith(">")) {
+      if (currentBlockType !== "blockquote") {
+        flushCurrentBlock(lineNum - 1);
+        currentBlockType = "blockquote";
+        currentStartLine = lineNum;
+      }
+      currentBlockLines.push(line.replace(/^>\s?/, ""));
+      continue;
+    }
+    const listMatch = line.match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
+    if (listMatch) {
+      if (currentBlockType !== "list_item" && currentBlockType !== "paragraph") {
+        flushCurrentBlock(lineNum - 1);
+        currentBlockType = "list_item";
+        currentStartLine = lineNum;
+      } else if (currentBlockType === null) {
+        currentBlockType = "list_item";
+        currentStartLine = lineNum;
+      }
+      currentBlockLines.push(line);
+      continue;
+    }
+    if (currentBlockType === null) {
+      currentBlockType = "paragraph";
+      currentStartLine = lineNum;
+    }
+    currentBlockLines.push(line);
+  }
+  flushCurrentBlock(lines.length);
+  return {
+    filePath,
+    nodes
+  };
+}
+
+// src/core/hasher.ts
+async function sha256(text2) {
+  const enc = new TextEncoder();
+  const data = enc.encode(text2);
+  if (typeof crypto !== "undefined" && crypto.subtle && typeof crypto.subtle.digest === "function") {
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  try {
+    const nodeCrypto = await import("crypto");
+    return nodeCrypto.createHash("sha256").update(text2).digest("hex");
+  } catch {
+    let h1 = 2166136261;
+    let h2 = 16777619;
+    for (let i = 0; i < text2.length; i++) {
+      const ch = text2.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 16777619);
+      h2 = Math.imul(h2 ^ ch >> 8, 16777619);
+    }
+    return (h1 >>> 0).toString(16).padStart(8, "0") + (h2 >>> 0).toString(16).padStart(8, "0");
+  }
+}
+
+// src/core/chunker.ts
+async function chunkMarkdown(filePath, content, options = {}) {
+  const minLength = options.minChunkLength ?? 40;
+  const parsed = parseMarkdown(filePath, content);
+  const chunks = [];
+  const headingStack = [];
+  for (const node of parsed.nodes) {
+    if (node.type === "heading") {
+      const level = node.level || 1;
+      while (headingStack.length > 0 && headingStack[headingStack.length - 1].level >= level) {
+        headingStack.pop();
+      }
+      headingStack.push({ level, text: node.text });
+      continue;
+    }
+    const cleanText = node.text.trim();
+    if (cleanText.length < minLength) {
+      continue;
+    }
+    const strippedLinks = cleanText.replace(/\[\[[^\]]+\]\]/g, "").replace(/https?:\/\/\S+/g, "").trim();
+    if (strippedLinks.length < 15) {
+      continue;
+    }
+    const breadcrumbSegments = [filePath, ...headingStack.map((h) => h.text)];
+    const breadcrumbs = `[${breadcrumbSegments.join(" > ")}]`;
+    const fullContext = `${breadcrumbs}
+${cleanText}`;
+    const hash2 = await sha256(cleanText);
+    chunks.push({
+      id: hash2,
+      filePath,
+      text: cleanText,
+      breadcrumbs,
+      fullContext,
+      startLine: node.startLine,
+      endLine: node.endLine
+    });
+  }
+  return chunks;
+}
+
+// src/core/vault-watcher.ts
+var VaultWatcher = class {
+  app;
+  vectorStorage;
+  workerClient;
+  logger;
+  getSettings;
+  eventRef = null;
+  debounceTimers = /* @__PURE__ */ new Map();
+  isProcessing = false;
+  queue = /* @__PURE__ */ new Set();
+  constructor(app, vectorStorage, workerClient, logger, getSettings) {
+    this.app = app;
+    this.vectorStorage = vectorStorage;
+    this.workerClient = workerClient;
+    this.logger = logger;
+    this.getSettings = getSettings;
+  }
+  start() {
+    if (this.eventRef) return;
+    this.eventRef = this.app.vault.on("modify", (file) => {
+      if (!(file instanceof import_obsidian4.TFile) || !file.path.endsWith(".md")) {
+        return;
+      }
+      const settings = this.getSettings();
+      if (!settings.autoWatchVault) {
+        return;
+      }
+      if (file.name.endsWith(".excalidraw.md") || file.path.endsWith(".excalidraw.md")) {
+        return;
+      }
+      const normalized = (0, import_obsidian4.normalizePath)(file.path);
+      const excluded = (settings.excludedFolders || "").split(",").map((s) => (0, import_obsidian4.normalizePath)(s.trim())).filter((s) => s.length > 0);
+      for (const ex of excluded) {
+        if (normalized.startsWith(ex)) {
+          return;
+        }
+      }
+      this.scheduleIndex(file.path);
+    });
+  }
+  stop() {
+    if (this.eventRef) {
+      this.app.vault.offref(this.eventRef);
+      this.eventRef = null;
+    }
+    for (const timer of this.debounceTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.debounceTimers.clear();
+    this.queue.clear();
+  }
+  scheduleIndex(filePath) {
+    const existingTimer = this.debounceTimers.get(filePath);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+    const timer = setTimeout(() => {
+      this.debounceTimers.delete(filePath);
+      this.queue.add(filePath);
+      this.processQueue();
+    }, 2500);
+    this.debounceTimers.set(filePath, timer);
+  }
+  async processQueue() {
+    if (this.isProcessing || this.queue.size === 0) {
+      return;
+    }
+    this.isProcessing = true;
+    try {
+      const paths = Array.from(this.queue);
+      this.queue.clear();
+      for (const filePath of paths) {
+        await this.indexSingleFile(filePath);
+      }
+    } catch (err) {
+      this.logger.error(`[VaultWatcher] \u041E\u0448\u0438\u0431\u043A\u0430 \u0444\u043E\u043D\u043E\u0432\u043E\u0439 \u0438\u043D\u0434\u0435\u043A\u0441\u0430\u0446\u0438\u0438: ${err?.message || err}`);
+    } finally {
+      this.isProcessing = false;
+      if (this.queue.size > 0) {
+        this.processQueue();
+      }
+    }
+  }
+  async indexSingleFile(filePath) {
+    const file = this.app.vault.getAbstractFileByPath(filePath);
+    if (!(file instanceof import_obsidian4.TFile)) {
+      return;
+    }
+    const settings = this.getSettings();
+    const content = await this.app.vault.read(file);
+    const fileChunks = await chunkMarkdown(file.path, content, {
+      minChunkLength: settings.minChunkLength
+    });
+    const chunksToEmbed = [];
+    const completeChunks = [];
+    for (const chunk of fileChunks) {
+      const cached = await this.vectorStorage.getChunk(chunk.id);
+      if (cached && cached.embedding) {
+        chunk.embedding = cached.embedding;
+        completeChunks.push(chunk);
+      } else {
+        chunksToEmbed.push(chunk);
+      }
+    }
+    if (chunksToEmbed.length > 0) {
+      const batchItems = chunksToEmbed.map((c) => ({ id: c.id, text: c.fullContext }));
+      const embeddings = await this.workerClient.embedBatch(batchItems);
+      for (let i = 0; i < chunksToEmbed.length; i++) {
+        chunksToEmbed[i].embedding = embeddings[i];
+        completeChunks.push(chunksToEmbed[i]);
+      }
+      await this.vectorStorage.saveChunks(completeChunks);
+      this.logger.info(`[VaultWatcher] \u0418\u043D\u043A\u0440\u0435\u043C\u0435\u043D\u0442\u0430\u043B\u044C\u043D\u043E \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0438\u0437\u0438\u0440\u043E\u0432\u0430\u043D "${file.basename}": \u0432\u0435\u043A\u0442\u043E\u0440\u0438\u0437\u043E\u0432\u0430\u043D\u043E ${chunksToEmbed.length} \u043D\u043E\u0432\u044B\u0445 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u043E\u0432.`);
+    }
+  }
+};
+
+// src/ai/vector-search.ts
+function normalizeVector(vec) {
+  let sumSq = 0;
+  for (let i = 0; i < vec.length; i++) {
+    sumSq += vec[i] * vec[i];
+  }
+  if (sumSq === 0) return vec;
+  const norm = Math.sqrt(sumSq);
+  if (Math.abs(norm - 1) < 1e-5) return vec;
+  const out = new Float32Array(vec.length);
+  const invNorm = 1 / norm;
+  for (let i = 0; i < vec.length; i++) {
+    out[i] = vec[i] * invNorm;
+  }
+  return out;
+}
+function getDomainFromPath(filePath) {
+  const normalized = filePath.replace(/\\/g, "/").replace(/^\/+/, "");
+  const firstSlash = normalized.indexOf("/");
+  if (firstSlash === -1) {
+    return "(Root)";
+  }
+  return normalized.substring(0, firstSlash);
+}
+var FlatVectorMatrix = class {
+  count;
+  dim;
+  data;
+  chunks;
+  constructor(validChunks) {
+    this.chunks = validChunks;
+    this.count = validChunks.length;
+    this.dim = validChunks[0]?.embedding?.length || 0;
+    this.data = new Float32Array(this.count * this.dim);
+    for (let i = 0; i < this.count; i++) {
+      const emb = normalizeVector(this.chunks[i].embedding);
+      this.data.set(emb, i * this.dim);
+    }
+  }
+  /**
+   * Fast dot product of row i and row j in contiguous memory buffer.
+   */
+  dotAt(i, j) {
+    const offA = i * this.dim;
+    const offB = j * this.dim;
+    let dot = 0;
+    const d = this.dim;
+    for (let k = 0; k < d; k++) {
+      dot += this.data[offA + k] * this.data[offB + k];
+    }
+    return dot;
+  }
+};
+function findCandidateClusters(chunks, threshold = 0.82) {
+  const validChunks = chunks.filter((c) => c.embedding && c.embedding.length > 0);
+  if (validChunks.length < 2) {
+    return [];
+  }
+  const matrix = new FlatVectorMatrix(validChunks);
+  const n = matrix.count;
+  const adj = /* @__PURE__ */ new Map();
+  for (let i = 0; i < n; i++) {
+    adj.set(i, /* @__PURE__ */ new Set());
+  }
+  const pairScores = /* @__PURE__ */ new Map();
+  for (let i = 0; i < n; i++) {
+    const pathA = validChunks[i].filePath;
+    for (let j = i + 1; j < n; j++) {
+      if (pathA === validChunks[j].filePath) {
+        continue;
+      }
+      const sim = matrix.dotAt(i, j);
+      if (sim >= threshold) {
+        adj.get(i).add(j);
+        adj.get(j).add(i);
+        const pairKey = `${i}_${j}`;
+        pairScores.set(pairKey, sim);
+      }
+    }
+  }
+  const visited = /* @__PURE__ */ new Set();
+  const rawClusters = [];
+  for (let i = 0; i < n; i++) {
+    if (visited.has(i) || adj.get(i).size === 0) {
+      continue;
+    }
+    const component2 = [];
+    const queue = [i];
+    visited.add(i);
+    while (queue.length > 0) {
+      const curr = queue.shift();
+      component2.push(curr);
+      for (const neighbor of adj.get(curr)) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push(neighbor);
+        }
+      }
+    }
+    if (component2.length >= 2) {
+      rawClusters.push(component2);
+    }
+  }
+  const candidateClusters = rawClusters.map((indices, idx) => {
+    const clusterChunks = indices.map((i) => validChunks[i]);
+    let maxSim = 0;
+    let sumSim = 0;
+    let pairCount = 0;
+    for (let a = 0; a < indices.length; a++) {
+      for (let b = a + 1; b < indices.length; b++) {
+        const i = indices[a];
+        const j = indices[b];
+        const pairKey = i < j ? `${i}_${j}` : `${j}_${i}`;
+        const sim = pairScores.get(pairKey);
+        if (sim !== void 0) {
+          maxSim = Math.max(maxSim, sim);
+          sumSim += sim;
+          pairCount++;
+        }
+      }
+    }
+    const avgSim = pairCount > 0 ? sumSim / pairCount : maxSim;
+    const domains = Array.from(new Set(clusterChunks.map((c) => getDomainFromPath(c.filePath))));
+    const domain = domains.length === 1 ? domains[0] : "Cross-folder";
+    return {
+      id: `cluster-${idx + 1}-${Date.now()}`,
+      similarity: Number(avgSim.toFixed(4)),
+      chunks: clusterChunks,
+      domain
+    };
+  });
+  candidateClusters.sort((a, b) => b.similarity - a.similarity);
+  return candidateClusters;
+}
+function findClustersForNote(notePath, chunks, threshold = 0.82) {
+  const validChunks = chunks.filter((c) => c.embedding && c.embedding.length > 0);
+  if (validChunks.length < 2) {
+    return [];
+  }
+  const noteIndices = [];
+  const otherIndices = [];
+  for (let i = 0; i < validChunks.length; i++) {
+    if (validChunks[i].filePath === notePath) {
+      noteIndices.push(i);
+    } else {
+      otherIndices.push(i);
+    }
+  }
+  if (noteIndices.length === 0 || otherIndices.length === 0) {
+    return [];
+  }
+  const matrix = new FlatVectorMatrix(validChunks);
+  const adj = /* @__PURE__ */ new Map();
+  for (let i = 0; i < validChunks.length; i++) {
+    adj.set(i, /* @__PURE__ */ new Set());
+  }
+  const pairScores = /* @__PURE__ */ new Map();
+  for (const i of noteIndices) {
+    for (const j of otherIndices) {
+      const sim = matrix.dotAt(i, j);
+      if (sim >= threshold) {
+        adj.get(i).add(j);
+        adj.get(j).add(i);
+        const pairKey = i < j ? `${i}_${j}` : `${j}_${i}`;
+        pairScores.set(pairKey, sim);
+      }
+    }
+  }
+  const visited = /* @__PURE__ */ new Set();
+  const rawClusters = [];
+  for (const startIdx of noteIndices) {
+    if (visited.has(startIdx) || adj.get(startIdx).size === 0) {
+      continue;
+    }
+    const component2 = [];
+    const queue = [startIdx];
+    visited.add(startIdx);
+    while (queue.length > 0) {
+      const curr = queue.shift();
+      component2.push(curr);
+      for (const neighbor of adj.get(curr)) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push(neighbor);
+        }
+      }
+    }
+    if (component2.length >= 2) {
+      rawClusters.push(component2);
+    }
+  }
+  const candidateClusters = rawClusters.map((indices, idx) => {
+    const clusterChunks = indices.map((i) => validChunks[i]);
+    let maxSim = 0;
+    let sumSim = 0;
+    let pairCount = 0;
+    for (let a = 0; a < indices.length; a++) {
+      for (let b = a + 1; b < indices.length; b++) {
+        const i = indices[a];
+        const j = indices[b];
+        const pairKey = i < j ? `${i}_${j}` : `${j}_${i}`;
+        const sim = pairScores.get(pairKey);
+        if (sim !== void 0) {
+          maxSim = Math.max(maxSim, sim);
+          sumSim += sim;
+          pairCount++;
+        }
+      }
+    }
+    const avgSim = pairCount > 0 ? sumSim / pairCount : maxSim;
+    const domains = Array.from(new Set(clusterChunks.map((c) => getDomainFromPath(c.filePath))));
+    const domain = domains.length === 1 ? domains[0] : "Cross-folder";
+    return {
+      id: `cluster-${idx + 1}-${Date.now()}`,
+      similarity: Number(avgSim.toFixed(4)),
+      chunks: clusterChunks,
+      domain
+    };
+  });
+  candidateClusters.sort((a, b) => b.similarity - a.similarity);
+  return candidateClusters;
+}
+
+// src/utils/vault-mutator.ts
+function normalizePath3(path) {
+  return path ? path.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\/|\/$/g, "") : "";
+}
+async function ensureFolderExists(app, folderPath) {
+  const normalized = normalizePath3(folderPath).trim();
+  if (!normalized || normalized === "/" || normalized === ".") {
+    return;
+  }
+  const parts = normalized.split("/").filter((p) => p.length > 0);
+  let currentPath = "";
+  for (const part of parts) {
+    currentPath = currentPath ? `${currentPath}/${part}` : part;
+    const exists = await app.vault.adapter.exists(currentPath);
+    if (!exists) {
+      try {
+        await app.vault.createFolder(currentPath);
+      } catch (err) {
+        if (!err.message?.includes("already exists")) {
+          throw err;
+        }
+      }
+    }
+  }
+}
+function getMarkdownFiles(app, excludedFolders = []) {
+  const normalizedExcludes = excludedFolders.map((f) => normalizePath3(f.trim())).filter((f) => f.length > 0);
+  return app.vault.getMarkdownFiles().filter((file) => {
+    if (file.name.endsWith(".excalidraw.md") || file.path.endsWith(".excalidraw.md")) {
+      return false;
+    }
+    const filePath = normalizePath3(file.path);
+    for (const excluded of normalizedExcludes) {
+      if (filePath.startsWith(excluded)) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+function sanitizeNoteTitle(title) {
+  return title.replace(/[:/\\*?"<>|#^\[\]]/g, "").trim();
+}
+function ensureFrontmatterAliases(content, aliases) {
+  if (!aliases || aliases.length === 0) {
+    return content;
+  }
+  const cleanAliases = Array.from(new Set(
+    aliases.map((a) => a.trim().replace(/[:/\\*?"<>|#^\[\]]/g, "")).filter((a) => a.length > 0)
+  ));
+  if (cleanAliases.length === 0) {
+    return content;
+  }
+  const frontmatterRegex = /^---\r?\n([\s\S]*?)\r?\n---/;
+  const match = content.match(frontmatterRegex);
+  const formattedAliases = cleanAliases.map((a) => `  - "${a.replace(/"/g, '\\"')}"`).join("\n");
+  if (match) {
+    const yamlBody = match[1];
+    if (/aliases\s*:/i.test(yamlBody)) {
+      return content;
+    }
+    const updatedYaml = `${yamlBody.trimEnd()}
+aliases:
+${formattedAliases}`;
+    return content.replace(frontmatterRegex, `---
+${updatedYaml}
+---`);
+  }
+  return `---
+aliases:
+${formattedAliases}
+---
+
+${content.trimStart()}`;
+}
+
 // src/main.ts
 var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
   settings = DEFAULT_SETTINGS;
   vectorStorage;
   transactionManager;
   geminiClient;
+  localLlmClient;
   workerClient;
+  vaultWatcher;
   logger = new LoggerService();
   candidateClusters = [];
   refactorPlans = {};
@@ -11065,8 +11389,23 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
         new import_obsidian5.Notice(`Semantic Gardener: \u041A\u0432\u043E\u0442\u0430 \u043A\u043B\u044E\u0447\u0430 #${info.prevIndex + 1} \u0438\u0441\u0447\u0435\u0440\u043F\u0430\u043D\u0430. \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u043D\u0430 \u043A\u043B\u044E\u0447 #${info.index + 1}`);
       }
     );
+    this.localLlmClient = new LocalLlmClient(
+      this.settings.localLlmEndpoint,
+      this.settings.localLlmModel,
+      this.settings.localLlmApiKey
+    );
     this.workerClient = new WorkerClient(this.app, this.manifest.id, this.logger);
     await this.logger.initFileLogger(this.app, this.manifest.id);
+    this.vaultWatcher = new VaultWatcher(
+      this.app,
+      this.vectorStorage,
+      this.workerClient,
+      this.logger,
+      () => this.settings
+    );
+    if (this.settings.autoWatchVault ?? true) {
+      this.vaultWatcher.start();
+    }
     this.workerClient.setModelProgressListener((file, percent) => {
       const overall = 15 + Math.round(percent / 100 * 35);
       if (percent >= 100) {
@@ -11129,9 +11468,25 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
     );
   }
   onunload() {
+    this.vaultWatcher?.stop();
     this.workerClient?.terminate();
     this.vectorStorage?.close();
     this.logger.info("Semantic Gardener \u0432\u044B\u0433\u0440\u0443\u0436\u0435\u043D.");
+  }
+  getActiveGatekeeper() {
+    if (this.settings.llmProvider === "openai-compatible") {
+      this.localLlmClient.updateConfig(
+        this.settings.localLlmEndpoint,
+        this.settings.localLlmModel,
+        this.settings.localLlmApiKey
+      );
+      return this.localLlmClient;
+    }
+    const hasApiKey = Boolean(this.settings.geminiApiKey || this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0);
+    if (hasApiKey) {
+      return this.geminiClient;
+    }
+    return null;
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -11281,9 +11636,10 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
       const batchLimit = Math.max(1, this.settings.autoGatekeeperBatchLimit || 30);
       const batchToAnalyze = this.candidateClusters.slice(0, batchLimit);
       new import_obsidian5.Notice(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432. \u0410\u0432\u0442\u043E\u0430\u043D\u0430\u043B\u0438\u0437 \u0442\u043E\u043F-${batchToAnalyze.length} \u0447\u0435\u0440\u0435\u0437 Gatekeeper...`);
-      const hasApiKey = Boolean(this.settings.geminiApiKey || this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0);
-      if (hasApiKey) {
-        this.logger.info(`\u0417\u0430\u043F\u0443\u0441\u043A \u0430\u043D\u0430\u043B\u0438\u0437\u0430 LLM Gatekeeper \u0434\u043B\u044F \u043F\u0435\u0440\u0432\u044B\u0445 ${batchToAnalyze.length} \u0438\u0437 ${this.candidateClusters.length} \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432...`);
+      const gatekeeper = this.getActiveGatekeeper();
+      if (gatekeeper) {
+        const providerName = this.settings.llmProvider === "openai-compatible" ? "Local LLM" : "Gemini Gatekeeper";
+        this.logger.info(`\u0417\u0430\u043F\u0443\u0441\u043A \u0430\u043D\u0430\u043B\u0438\u0437\u0430 ${providerName} \u0434\u043B\u044F \u043F\u0435\u0440\u0432\u044B\u0445 ${batchToAnalyze.length} \u0438\u0437 ${this.candidateClusters.length} \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432...`);
         for (let i = 0; i < batchToAnalyze.length; i++) {
           if (signal.aborted) {
             this.logger.cancelSession();
@@ -11298,7 +11654,7 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
           const sampleName = cluster.chunks[0]?.filePath?.split("/").pop()?.replace(/\.md$/, "") || "";
           const clusterLabel = `\u041A\u043B\u0430\u0441\u0442\u0435\u0440 ${clusterNumber} ("${sampleName}")`;
           try {
-            const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
+            const plan = await gatekeeper.validateAndRefactorCluster(cluster);
             this.refactorPlans[cluster.id] = plan;
             if (plan.isDuplicate) {
               this.logger.success(`${clusterLabel} \u043E\u0434\u043E\u0431\u0440\u0435\u043D: \u043A\u043E\u043D\u0446\u0435\u043F\u0442 "${plan.conceptTitle}".`);
@@ -11309,13 +11665,14 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
             console.error(`AI Analysis error for cluster ${cluster.id}:`, aiErr);
             this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 AI \u0434\u043B\u044F ${clusterLabel}: ${aiErr.message}`);
           }
+          const delayMs = this.settings.llmProvider === "openai-compatible" ? 100 : 1200;
           if (i < batchToAnalyze.length - 1 && !signal.aborted) {
-            await new Promise((r) => setTimeout(r, 1200));
+            await new Promise((r) => setTimeout(r, delayMs));
           }
         }
       } else {
-        this.logger.warn("API-\u043A\u043B\u044E\u0447 Gemini \u043D\u0435 \u0437\u0430\u0434\u0430\u043D. \u0410\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F \u0437\u0430\u043C\u0435\u043D \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0430.");
-        new import_obsidian5.Notice("\u0423\u043A\u0430\u0436\u0438\u0442\u0435 Gemini API-\u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445 \u0434\u043B\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0437\u0430\u043C\u0435\u043D.");
+        this.logger.warn("LLM \u043D\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D\u0430 (\u043D\u0435\u0442 Gemini API-\u043A\u043B\u044E\u0447\u0430 \u0438\u043B\u0438 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u0439 \u043C\u043E\u0434\u0435\u043B\u0438). \u0410\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F \u0437\u0430\u043C\u0435\u043D \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0430.");
+        new import_obsidian5.Notice("\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u0442\u0435 Gemini API-\u043A\u043B\u044E\u0447 \u0438\u043B\u0438 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0443\u044E LLM \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445 \u0434\u043B\u044F \u0430\u0432\u0442\u043E\u0430\u043D\u0430\u043B\u0438\u0437\u0430.");
       }
       this.scanProgress = "";
       this.logger.finishSession(`\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E! \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u043E ${this.candidateClusters.length} \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432.`);
@@ -11412,9 +11769,10 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
         const batchLimit = Math.max(1, this.settings.autoGatekeeperBatchLimit || 30);
         const batchToAnalyze = this.candidateClusters.slice(0, batchLimit);
         new import_obsidian5.Notice(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439 \u0434\u043B\u044F "${activeFile.basename}". \u0410\u0432\u0442\u043E\u0430\u043D\u0430\u043B\u0438\u0437 \u0442\u043E\u043F-${batchToAnalyze.length}...`);
-        const hasApiKey = Boolean(this.settings.geminiApiKey || this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0);
-        if (hasApiKey) {
-          this.logger.info(`\u0410\u043D\u0430\u043B\u0438\u0437 ${batchToAnalyze.length} \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439 \u0447\u0435\u0440\u0435\u0437 Gemini Gatekeeper...`);
+        const gatekeeper = this.getActiveGatekeeper();
+        if (gatekeeper) {
+          const providerName = this.settings.llmProvider === "openai-compatible" ? "Local LLM" : "Gemini Gatekeeper";
+          this.logger.info(`\u0410\u043D\u0430\u043B\u0438\u0437 ${batchToAnalyze.length} \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439 \u0447\u0435\u0440\u0435\u0437 ${providerName}...`);
           for (let i = 0; i < batchToAnalyze.length; i++) {
             if (signal.aborted) {
               this.logger.cancelSession();
@@ -11427,7 +11785,7 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
             const sampleName = cluster.chunks[0]?.filePath?.split("/").pop()?.replace(/\.md$/, "") || "";
             const clusterLabel = `\u041A\u043B\u0430\u0441\u0442\u0435\u0440 ${clusterNumber} ("${sampleName}")`;
             try {
-              const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
+              const plan = await gatekeeper.validateAndRefactorCluster(cluster);
               this.refactorPlans[cluster.id] = plan;
               if (plan.isDuplicate) {
                 this.logger.success(`${clusterLabel} \u043E\u0434\u043E\u0431\u0440\u0435\u043D: \u043A\u043E\u043D\u0446\u0435\u043F\u0442 "${plan.conceptTitle}".`);
@@ -11438,8 +11796,9 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
               console.error("Active note AI error:", aiErr);
               this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 AI \u0434\u043B\u044F ${clusterLabel}: ${aiErr.message}`);
             }
+            const delayMs = this.settings.llmProvider === "openai-compatible" ? 100 : 1200;
             if (i < batchToAnalyze.length - 1 && !signal.aborted) {
-              await new Promise((r) => setTimeout(r, 1200));
+              await new Promise((r) => setTimeout(r, delayMs));
             }
           }
         }
@@ -11514,13 +11873,14 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
    * Evaluates a single cluster on demand (e.g. if skipped or failed earlier due to rate limit).
    */
   async analyzeCluster(cluster) {
-    if (!this.settings.geminiApiKey) {
-      new import_obsidian5.Notice("\u0423\u043A\u0430\u0436\u0438\u0442\u0435 Gemini API-\u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445 \u043F\u043B\u0430\u0433\u0438\u043D\u0430.");
+    const gatekeeper = this.getActiveGatekeeper();
+    if (!gatekeeper) {
+      new import_obsidian5.Notice("\u0423\u043A\u0430\u0436\u0438\u0442\u0435 Gemini API-\u043A\u043B\u044E\u0447 \u0438\u043B\u0438 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u0439 LLM \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445 \u043F\u043B\u0430\u0433\u0438\u043D\u0430.");
       return null;
     }
     try {
       this.logger.info(`\u0417\u0430\u043F\u0443\u0441\u043A \u0442\u043E\u0447\u0435\u0447\u043D\u043E\u0433\u043E AI-\u0430\u043D\u0430\u043B\u0438\u0437\u0430 \u0434\u043B\u044F \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430...`);
-      const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
+      const plan = await gatekeeper.validateAndRefactorCluster(cluster);
       this.refactorPlans[cluster.id] = plan;
       if (plan.isDuplicate) {
         this.logger.success(`\u041A\u043E\u043D\u0446\u0435\u043F\u0442 "${plan.conceptTitle}" \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D AI.`);

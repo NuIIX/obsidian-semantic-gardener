@@ -7,7 +7,9 @@ import { VectorStorage } from './storage/indexed-db';
 import { TransactionManager } from './storage/transaction-manager';
 import type { MutationRequest } from './storage/transaction-manager';
 import { GeminiClient } from './ai/gemini-client';
+import { LocalLlmClient } from './ai/local-llm-client';
 import { WorkerClient } from './ai/worker-client';
+import { VaultWatcher } from './core/vault-watcher';
 import { chunkMarkdown } from './core/chunker';
 import { findCandidateClusters, findClustersForNote } from './ai/vector-search';
 import { getMarkdownFiles, ensureFolderExists, sanitizeNoteTitle, ensureFrontmatterAliases } from './utils/vault-mutator';
@@ -18,7 +20,9 @@ export default class SemanticGardenerPlugin extends Plugin {
   vectorStorage!: VectorStorage;
   transactionManager!: TransactionManager;
   geminiClient!: GeminiClient;
+  localLlmClient!: LocalLlmClient;
   workerClient!: WorkerClient;
+  vaultWatcher!: VaultWatcher;
   logger: LoggerService = new LoggerService();
 
   candidateClusters: CandidateCluster[] = [];
@@ -47,8 +51,26 @@ export default class SemanticGardenerPlugin extends Plugin {
         new Notice(`Semantic Gardener: Квота ключа #${info.prevIndex + 1} исчерпана. Переключено на ключ #${info.index + 1}`);
       }
     );
+
+    this.localLlmClient = new LocalLlmClient(
+      this.settings.localLlmEndpoint,
+      this.settings.localLlmModel,
+      this.settings.localLlmApiKey
+    );
+
     this.workerClient = new WorkerClient(this.app, this.manifest.id, this.logger);
     await this.logger.initFileLogger(this.app, this.manifest.id);
+
+    this.vaultWatcher = new VaultWatcher(
+      this.app,
+      this.vectorStorage,
+      this.workerClient,
+      this.logger,
+      () => this.settings
+    );
+    if (this.settings.autoWatchVault ?? true) {
+      this.vaultWatcher.start();
+    }
 
     this.workerClient.setModelProgressListener((file, percent) => {
       const overall = 15 + Math.round((percent / 100) * 35);
@@ -129,9 +151,27 @@ export default class SemanticGardenerPlugin extends Plugin {
   }
 
   onunload() {
+    this.vaultWatcher?.stop();
     this.workerClient?.terminate();
     this.vectorStorage?.close();
     this.logger.info('Semantic Gardener выгружен.');
+  }
+
+  getActiveGatekeeper(): { validateAndRefactorCluster: (cluster: CandidateCluster) => Promise<RefactorPlan> } | null {
+    if (this.settings.llmProvider === 'openai-compatible') {
+      this.localLlmClient.updateConfig(
+        this.settings.localLlmEndpoint,
+        this.settings.localLlmModel,
+        this.settings.localLlmApiKey
+      );
+      return this.localLlmClient;
+    }
+
+    const hasApiKey = Boolean(this.settings.geminiApiKey || (this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0));
+    if (hasApiKey) {
+      return this.geminiClient;
+    }
+    return null;
   }
 
   async loadSettings() {
@@ -319,10 +359,11 @@ export default class SemanticGardenerPlugin extends Plugin {
 
       new Notice(`Найдено ${this.candidateClusters.length} кандидатов. Автоанализ топ-${batchToAnalyze.length} через Gatekeeper...`);
 
-      // 4. Validate top batch with Gemini Gatekeeper if API key is provided (80% - 100%)
-      const hasApiKey = Boolean(this.settings.geminiApiKey || (this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0));
-      if (hasApiKey) {
-        this.logger.info(`Запуск анализа LLM Gatekeeper для первых ${batchToAnalyze.length} из ${this.candidateClusters.length} кандидатов...`);
+      // 4. Validate top batch with active LLM Gatekeeper (80% - 100%)
+      const gatekeeper = this.getActiveGatekeeper();
+      if (gatekeeper) {
+        const providerName = this.settings.llmProvider === 'openai-compatible' ? 'Local LLM' : 'Gemini Gatekeeper';
+        this.logger.info(`Запуск анализа ${providerName} для первых ${batchToAnalyze.length} из ${this.candidateClusters.length} кандидатов...`);
         for (let i = 0; i < batchToAnalyze.length; i++) {
           if (signal.aborted) {
             this.logger.cancelSession();
@@ -340,7 +381,7 @@ export default class SemanticGardenerPlugin extends Plugin {
           const clusterLabel = `Кластер ${clusterNumber} ("${sampleName}")`;
 
           try {
-            const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
+            const plan = await gatekeeper.validateAndRefactorCluster(cluster);
             this.refactorPlans[cluster.id] = plan;
             if (plan.isDuplicate) {
               this.logger.success(`${clusterLabel} одобрен: концепт "${plan.conceptTitle}".`);
@@ -352,14 +393,15 @@ export default class SemanticGardenerPlugin extends Plugin {
             this.logger.error(`Ошибка AI для ${clusterLabel}: ${aiErr.message}`);
           }
 
-          // Rate-limiting delay (1.2s) between requests
+          // Delay between requests
+          const delayMs = this.settings.llmProvider === 'openai-compatible' ? 100 : 1200;
           if (i < batchToAnalyze.length - 1 && !signal.aborted) {
-            await new Promise(r => setTimeout(r, 1200));
+            await new Promise(r => setTimeout(r, delayMs));
           }
         }
       } else {
-        this.logger.warn('API-ключ Gemini не задан. Автоматическая генерация замен пропущена.');
-        new Notice('Укажите Gemini API-ключ в настройках для автоматической генерации микрохирургических замен.');
+        this.logger.warn('LLM не настроена (нет Gemini API-ключа или локальной модели). Автоматическая генерация замен пропущена.');
+        new Notice('Настройте Gemini API-ключ или локальную LLM в настройках для автоанализа.');
       }
 
       this.scanProgress = '';
@@ -476,9 +518,10 @@ export default class SemanticGardenerPlugin extends Plugin {
 
         new Notice(`Найдено ${this.candidateClusters.length} совпадений для "${activeFile.basename}". Автоанализ топ-${batchToAnalyze.length}...`);
 
-        const hasApiKey = Boolean(this.settings.geminiApiKey || (this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0));
-        if (hasApiKey) {
-          this.logger.info(`Анализ ${batchToAnalyze.length} совпадений через Gemini Gatekeeper...`);
+        const gatekeeper = this.getActiveGatekeeper();
+        if (gatekeeper) {
+          const providerName = this.settings.llmProvider === 'openai-compatible' ? 'Local LLM' : 'Gemini Gatekeeper';
+          this.logger.info(`Анализ ${batchToAnalyze.length} совпадений через ${providerName}...`);
           for (let i = 0; i < batchToAnalyze.length; i++) {
             if (signal.aborted) {
               this.logger.cancelSession();
@@ -493,7 +536,7 @@ export default class SemanticGardenerPlugin extends Plugin {
             const clusterLabel = `Кластер ${clusterNumber} ("${sampleName}")`;
 
             try {
-              const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
+              const plan = await gatekeeper.validateAndRefactorCluster(cluster);
               this.refactorPlans[cluster.id] = plan;
               if (plan.isDuplicate) {
                 this.logger.success(`${clusterLabel} одобрен: концепт "${plan.conceptTitle}".`);
@@ -505,9 +548,9 @@ export default class SemanticGardenerPlugin extends Plugin {
               this.logger.error(`Ошибка AI для ${clusterLabel}: ${aiErr.message}`);
             }
 
-            // Rate-limiting delay between requests
+            const delayMs = this.settings.llmProvider === 'openai-compatible' ? 100 : 1200;
             if (i < batchToAnalyze.length - 1 && !signal.aborted) {
-              await new Promise(r => setTimeout(r, 1200));
+              await new Promise(r => setTimeout(r, delayMs));
             }
           }
         }
@@ -595,13 +638,14 @@ export default class SemanticGardenerPlugin extends Plugin {
    * Evaluates a single cluster on demand (e.g. if skipped or failed earlier due to rate limit).
    */
   async analyzeCluster(cluster: CandidateCluster): Promise<RefactorPlan | null> {
-    if (!this.settings.geminiApiKey) {
-      new Notice('Укажите Gemini API-ключ в настройках плагина.');
+    const gatekeeper = this.getActiveGatekeeper();
+    if (!gatekeeper) {
+      new Notice('Укажите Gemini API-ключ или настройте параметры локальной LLM в настройках плагина.');
       return null;
     }
     try {
       this.logger.info(`Запуск точечного AI-анализа для концепта...`);
-      const plan = await this.geminiClient.validateAndRefactorCluster(cluster);
+      const plan = await gatekeeper.validateAndRefactorCluster(cluster);
       this.refactorPlans[cluster.id] = plan;
       if (plan.isDuplicate) {
         this.logger.success(`Концепт "${plan.conceptTitle}" успешно подтвержден AI.`);

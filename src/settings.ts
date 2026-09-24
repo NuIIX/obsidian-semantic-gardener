@@ -15,20 +15,82 @@ export class SemanticGardenerSettingTab extends PluginSettingTab {
 
     containerEl.createEl('h2', { text: 'Semantic Gardener — Настройки' });
 
-    // 1. Gemini API Keys (BYOK with Multi-key Rotation on 429)
-    if (!this.plugin.settings.geminiApiKeys || !Array.isArray(this.plugin.settings.geminiApiKeys)) {
-      this.plugin.settings.geminiApiKeys = this.plugin.settings.geminiApiKey ? [this.plugin.settings.geminiApiKey] : [''];
-    }
-    if (this.plugin.settings.geminiApiKeys.length === 0) {
-      this.plugin.settings.geminiApiKeys = [''];
-    }
-
-    const keyList = this.plugin.settings.geminiApiKeys;
-
+    // 0. LLM Provider Selection
     new Setting(containerEl)
-      .setName('Ключи Google AI Studio API (BYOK)')
-      .setDesc('Укажите один или несколько API-ключей Gemini. При исчерпании суточного лимита (3 ошибки 429 подряд) плагин автоматически переключится на следующий ключ.')
-      .setHeading();
+      .setName('Провайдер LLM Gatekeeper')
+      .setDesc('Выберите бэкенд для семантической проверки дубликатов и генерации плана рефакторинга.')
+      .addDropdown(dropdown => {
+        dropdown
+          .addOption('gemini', 'Google Gemini (Облачный AI Studio BYOK)')
+          .addOption('openai-compatible', 'Локальная LLM (Ollama / LM Studio / LocalAI)')
+          .setValue(this.plugin.settings.llmProvider || 'gemini')
+          .onChange(async (value) => {
+            this.plugin.settings.llmProvider = value as any;
+            await this.plugin.saveSettings();
+            this.display();
+          });
+      });
+
+    if (this.plugin.settings.llmProvider === 'openai-compatible') {
+      new Setting(containerEl)
+        .setName('Настройки локальной LLM')
+        .setDesc('Параметры подключения к локальному серверу по протоколу OpenAI Chat Completions.')
+        .setHeading();
+
+      new Setting(containerEl)
+        .setName('API Endpoint')
+        .setDesc('URL локального сервера (например, http://localhost:11434/v1 для Ollama или http://localhost:1234/v1 для LM Studio).')
+        .addText(text => {
+          text
+            .setPlaceholder('http://localhost:11434/v1')
+            .setValue(this.plugin.settings.localLlmEndpoint || 'http://localhost:11434/v1')
+            .onChange(async (val) => {
+              this.plugin.settings.localLlmEndpoint = val.trim();
+              await this.plugin.saveSettings();
+            });
+        });
+
+      new Setting(containerEl)
+        .setName('Название модели')
+        .setDesc('Имя загруженной модели (например: llama3.2, qwen2.5, mistral, deepseek-r1).')
+        .addText(text => {
+          text
+            .setPlaceholder('llama3.2')
+            .setValue(this.plugin.settings.localLlmModel || 'llama3.2')
+            .onChange(async (val) => {
+              this.plugin.settings.localLlmModel = val.trim();
+              await this.plugin.saveSettings();
+            });
+        });
+
+      new Setting(containerEl)
+        .setName('API-ключ (необязательно)')
+        .setDesc('Если локальный сервер или прокси требует авторизации (Bearer token). Для Ollama/LM Studio оставьте пустым.')
+        .addText(text => {
+          text
+            .setPlaceholder('любой-токен-или-пусто')
+            .setValue(this.plugin.settings.localLlmApiKey || '')
+            .onChange(async (val) => {
+              this.plugin.settings.localLlmApiKey = val.trim();
+              await this.plugin.saveSettings();
+            });
+          text.inputEl.type = 'password';
+        });
+    } else {
+      // 1. Gemini API Keys (BYOK with Multi-key Rotation on 429)
+      if (!this.plugin.settings.geminiApiKeys || !Array.isArray(this.plugin.settings.geminiApiKeys)) {
+        this.plugin.settings.geminiApiKeys = this.plugin.settings.geminiApiKey ? [this.plugin.settings.geminiApiKey] : [''];
+      }
+      if (this.plugin.settings.geminiApiKeys.length === 0) {
+        this.plugin.settings.geminiApiKeys = [''];
+      }
+
+      const keyList = this.plugin.settings.geminiApiKeys;
+
+      new Setting(containerEl)
+        .setName('Ключи Google AI Studio API (BYOK)')
+        .setDesc('Укажите один или несколько API-ключей Gemini. При исчерпании суточного лимита (3 ошибки 429 подряд) плагин автоматически переключится на следующий ключ.')
+        .setHeading();
 
     keyList.forEach((key, index) => {
       const setting = new Setting(containerEl)
@@ -118,6 +180,25 @@ export class SemanticGardenerSettingTab extends PluginSettingTab {
             this.plugin.settings.geminiModel = value;
             this.plugin.geminiClient.setModel(value);
             await this.plugin.saveSettings();
+          });
+      });
+    }
+
+    // Vault Watcher Toggle
+    new Setting(containerEl)
+      .setName('Фоновый Vault Watcher')
+      .setDesc('Автоматически отслеживать изменения заметок и обновлять векторный кэш в фоне с задержкой (debounced 2.5с).')
+      .addToggle(toggle => {
+        toggle
+          .setValue(this.plugin.settings.autoWatchVault ?? true)
+          .onChange(async (value) => {
+            this.plugin.settings.autoWatchVault = value;
+            await this.plugin.saveSettings();
+            if (value) {
+              this.plugin.vaultWatcher?.start();
+            } else {
+              this.plugin.vaultWatcher?.stop();
+            }
           });
       });
 

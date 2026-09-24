@@ -1,4 +1,8 @@
-import { App, TFile, TFolder, normalizePath } from 'obsidian';
+import type { App, TFile, TFolder } from 'obsidian';
+
+function normalizePath(path: string): string {
+  return path ? path.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/|\/$/g, '') : '';
+}
 
 /**
  * Ensures that a given directory path exists in the Obsidian vault.

@@ -52,10 +52,17 @@ export interface Transaction {
   backups: FileBackup[];
 }
 
+export type LlmProviderType = 'gemini' | 'openai-compatible';
+
 export interface PluginSettings {
   geminiApiKey: string;
   geminiApiKeys: string[];
   geminiModel: string;
+  llmProvider: LlmProviderType;
+  localLlmEndpoint: string;
+  localLlmModel: string;
+  localLlmApiKey: string;
+  autoWatchVault: boolean;
   similarityThreshold: number;
   minChunkLength: number;
   conceptsFolder: string;
@@ -68,6 +75,11 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   geminiApiKey: '',
   geminiApiKeys: [],
   geminiModel: 'gemini-3.5-flash',
+  llmProvider: 'gemini',
+  localLlmEndpoint: 'http://localhost:11434/v1',
+  localLlmModel: 'llama3.2',
+  localLlmApiKey: '',
+  autoWatchVault: true,
   similarityThreshold: 0.82,
   minChunkLength: 40,
   conceptsFolder: 'Concepts',

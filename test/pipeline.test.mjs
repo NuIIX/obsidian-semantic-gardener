@@ -350,4 +350,33 @@ test('GeminiClient: multi-key pool rotates to next key on rotation and wraps aro
   assert.strictEqual(client.getCurrentKeyIndex(), 0);
 });
 
+test('aliases: ensureFrontmatterAliases formats and injects YAML frontmatter correctly', async () => {
+  const { ensureFrontmatterAliases } = await import('../src/utils/vault-mutator.ts');
+
+  // Case 1: No existing frontmatter
+  const plainText = `# Distributed Caching\nCaching reduces database load.`;
+  const result1 = ensureFrontmatterAliases(plainText, ['Кэширование', 'Distributed Cache']);
+  assert.ok(result1.startsWith('---\naliases:\n  - "Кэширование"\n  - "Distributed Cache"\n---'));
+  assert.ok(result1.includes('# Distributed Caching'));
+
+  // Case 2: Existing frontmatter without aliases
+  const withFrontmatter = `---\ntags: [arch, perf]\n---\n# Distributed Caching`;
+  const result2 = ensureFrontmatterAliases(withFrontmatter, ['Кэширование']);
+  assert.ok(result2.includes('tags: [arch, perf]'));
+  assert.ok(result2.includes('aliases:\n  - "Кэширование"'));
+
+  // Case 3: Empty aliases leaves content untouched
+  const untouched = ensureFrontmatterAliases(plainText, []);
+  assert.strictEqual(untouched, plainText);
+});
+
+test('LocalLlmClient: instantiates and updates OpenAI-compatible configuration', async () => {
+  const { LocalLlmClient } = await import('../src/ai/local-llm-client.ts');
+  const client = new LocalLlmClient('http://localhost:11434/v1', 'llama3.2', 'secret-token');
+  assert.ok(client);
+
+  client.updateConfig('http://localhost:1234/v1', 'qwen2.5', '');
+  assert.ok(client);
+});
+
 
