@@ -19,7 +19,7 @@
 >
   <div class="cluster-card-top">
     <div class="title-container">
-      <span class="cluster-title">{displayTitle}</span>
+      <span class="cluster-title" title={displayTitle}>{displayTitle}</span>
     </div>
     <span class="similarity-badge" title="Косинусное сходство векторов">
       {similarityPercent}%
@@ -53,7 +53,7 @@
 
   <div class="cluster-files-list">
     {#each fileNames.slice(0, 3) as fn}
-      <span class="file-tag">{fn}</span>
+      <span class="file-tag" title={fn}>{fn}</span>
     {/each}
     {#if fileNames.length > 3}
       <span class="file-tag more">+{fileNames.length - 3}</span>
@@ -94,6 +94,12 @@
     align-items: baseline;
     gap: 8px;
     margin-bottom: 6px;
+    min-width: 0;
+  }
+
+  .title-container {
+    flex: 1;
+    min-width: 0;
   }
 
   .cluster-title {
@@ -106,6 +112,8 @@
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   .similarity-badge {
@@ -116,6 +124,7 @@
     background-color: rgba(46, 160, 67, 0.15);
     color: var(--text-success, #3fb950);
     white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .cluster-meta {

@@ -17,48 +17,77 @@
       : modification.selectedMode === 'transclusion' 
         ? modification.transclusionSpan 
         : modification.originalSpan;
+
+  $: sectionHierarchy = (() => {
+    if (!breadcrumbs) return '';
+    const clean = breadcrumbs.replace(/^\[|\]$/g, '').trim();
+    if (clean.startsWith(modification.filePath)) {
+      const rest = clean.slice(modification.filePath.length).replace(/^[\s>]+/, '').trim();
+      return rest;
+    }
+    const filename = modification.filePath.split('/').pop() || '';
+    if (clean === modification.filePath || clean === filename || clean === filename.replace(/\.md$/, '')) {
+      return '';
+    }
+    return clean;
+  })();
 </script>
 
 <div class="diff-card {modification.selectedMode === 'skip' ? 'is-skipped' : ''}">
   <div class="diff-card-header">
     <div class="file-info">
-      <span class="file-icon">📄</span>
-      {#if onOpenFile}
-        <button 
-          type="button"
-          class="file-path clickable" 
-          on:click={() => onOpenFile?.(modification.filePath)}
-          title="Кликните, чтобы открыть заметку в новой вкладке Obsidian"
-        >
-          {modification.filePath}
-        </button>
-      {:else}
-        <span class="file-path">
-          {modification.filePath}
-        </span>
-      {/if}
-      {#if breadcrumbs}
-        <span class="file-breadcrumbs">{breadcrumbs}</span>
-      {/if}
-      {#if onOpenFile}
-        <button 
-          type="button" 
-          class="file-action-btn" 
-          on:click={() => onOpenFile?.(modification.filePath)}
-          title="Открыть заметку в новой вкладке Obsidian"
-        >
-          📂 Открыть
-        </button>
-      {/if}
-      {#if onCompareNotes}
-        <button 
-          type="button" 
-          class="file-action-btn compare-btn" 
-          on:click={() => onCompareNotes?.(modification.filePath)}
-          title="Сравнить эту заметку целиком с другой заметкой из этого концепта"
-        >
-          📑 Сравнить целиком
-        </button>
+      <div class="file-path-row">
+        <span class="file-icon">📄</span>
+        {#if onOpenFile}
+          <button 
+            type="button"
+            class="file-path clickable" 
+            on:click={() => onOpenFile?.(modification.filePath)}
+            title="Кликните, чтобы открыть заметку в новой вкладке Obsidian ({modification.filePath})"
+          >
+            {modification.filePath}
+          </button>
+        {:else}
+          <span class="file-path" title={modification.filePath}>
+            {modification.filePath}
+          </span>
+        {/if}
+
+        <div class="file-actions">
+          {#if onOpenFile}
+            <button 
+              type="button" 
+              class="file-action-btn" 
+              on:click={() => onOpenFile?.(modification.filePath)}
+              title="Открыть заметку в новой вкладке Obsidian"
+            >
+              📂 Открыть
+            </button>
+          {/if}
+          {#if onCompareNotes}
+            <button 
+              type="button" 
+              class="file-action-btn compare-btn" 
+              on:click={() => onCompareNotes?.(modification.filePath)}
+              title="Сравнить эту заметку целиком с другой заметкой из этого концепта"
+            >
+              📑 Сравнить целиком
+            </button>
+          {/if}
+        </div>
+      </div>
+
+      {#if sectionHierarchy}
+        <div class="file-breadcrumbs" title={breadcrumbs}>
+          <span class="breadcrumb-arrow">↳</span>
+          <span class="breadcrumb-label">Раздел:</span>
+          <span class="breadcrumb-text">{sectionHierarchy}</span>
+        </div>
+      {:else if breadcrumbs && !breadcrumbs.includes(modification.filePath)}
+        <div class="file-breadcrumbs" title={breadcrumbs}>
+          <span class="breadcrumb-arrow">↳</span>
+          <span class="breadcrumb-text">{breadcrumbs}</span>
+        </div>
       {/if}
     </div>
 
@@ -117,6 +146,7 @@
     margin-bottom: 14px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     transition: border-color 0.2s ease, opacity 0.2s ease;
+    overflow: hidden;
   }
 
   .diff-card.is-skipped {
@@ -127,37 +157,62 @@
   .diff-card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding: 10px 14px;
     border-bottom: 1px solid var(--background-modifier-border);
     background-color: var(--background-secondary-alt);
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
+    min-width: 0;
   }
 
   .file-info {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    flex: 1 1 300px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .file-path-row {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 8px;
-    font-size: 0.9em;
+    width: 100%;
+    min-width: 0;
   }
 
   .file-icon {
     font-size: 1.1em;
+    flex-shrink: 0;
+    line-height: 1.4;
+    margin-top: 1px;
   }
 
   .file-path {
     font-weight: 600;
     color: var(--text-normal);
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    text-align: left;
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   button.file-path {
     background: none;
     border: none;
     padding: 0;
+    margin: 0;
     font: inherit;
+    display: inline;
     text-align: left;
   }
 
@@ -172,14 +227,22 @@
     color: var(--text-accent-hover, var(--text-accent));
   }
 
+  .file-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
   .file-action-btn {
     font-size: 0.75rem;
-    padding: 2px 7px;
+    padding: 3px 8px;
     border-radius: 4px;
     border: 1px solid var(--background-modifier-border);
     background: var(--background-primary);
     color: var(--text-muted);
     cursor: pointer;
+    white-space: nowrap;
     transition: all 0.15s ease;
   }
 
@@ -194,9 +257,42 @@
   }
 
   .file-breadcrumbs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
     font-size: 0.8em;
     color: var(--text-muted);
     font-family: var(--font-monospace);
+    background-color: var(--background-primary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    line-height: 1.35;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .breadcrumb-arrow {
+    color: var(--text-faint);
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+
+  .breadcrumb-label {
+    color: var(--text-faint);
+    font-size: 0.9em;
+    flex-shrink: 0;
+  }
+
+  .breadcrumb-text {
+    color: var(--text-accent);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .mode-toggles {
@@ -206,6 +302,8 @@
     padding: 3px;
     border-radius: 6px;
     border: 1px solid var(--background-modifier-border);
+    flex-shrink: 0;
+    align-self: flex-start;
   }
 
   .mode-btn {

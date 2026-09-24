@@ -54,7 +54,7 @@
     <div class="modal-meta-bar">
       <div class="file-column">
         <strong>Заметка А:</strong> 
-        <span class="file-name-tag">{fileNameA}</span>
+        <span class="file-name-tag" title={filePathA}>{fileNameA}</span>
         <button class="sg-btn sg-btn-sm" on:click={() => onOpenFile(filePathA)} title="Открыть во вкладке">
           📂 Открыть А
         </button>
@@ -70,7 +70,7 @@
 
       <div class="file-column">
         <strong>Заметка Б:</strong> 
-        <span class="file-name-tag">{fileNameB}</span>
+        <span class="file-name-tag" title={filePathB}>{fileNameB}</span>
         <button class="sg-btn sg-btn-sm" on:click={() => onOpenFile(filePathB)} title="Открыть во вкладке">
           📂 Открыть Б
         </button>
@@ -198,21 +198,30 @@
     border-bottom: 1px solid var(--background-modifier-border);
   }
 
+  @media (max-width: 650px) {
+    .modal-meta-bar {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+  }
+
   .file-column {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
-    overflow: hidden;
+    min-width: 0;
   }
 
   .file-name-tag {
     font-family: var(--font-monospace);
     font-size: 0.85rem;
     color: var(--text-accent);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 200px;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    line-height: 1.35;
+    min-width: 0;
   }
 
   .stats-bar {

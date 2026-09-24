@@ -798,6 +798,7 @@
     display: flex;
     flex: 1;
     overflow: hidden;
+    min-width: 0;
   }
 
   /* Left Sidebar */
@@ -980,6 +981,7 @@
     display: flex;
     flex-direction: column;
     background-color: var(--background-primary);
+    min-width: 0;
   }
 
   .empty-selection {
@@ -1005,6 +1007,7 @@
     min-height: 100%;
     padding: 16px 20px;
     gap: 16px;
+    min-width: 0;
   }
 
   .narrow-nav-row {
