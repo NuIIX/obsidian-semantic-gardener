@@ -3,36 +3,33 @@ export const refactorEngineSchema = {
   properties: {
     isDuplicate: { 
       type: "BOOLEAN", 
-      description: "True only if the excerpts describe the exact same entity/concept in compatible domains. False if homonyms or cross-domain metaphors." 
-    },
-    rejectionReason: { 
-      type: "STRING", 
-      description: "Brief 1-2 sentence explanation if isDuplicate is false. MUST BE EMPTY STRING '' if isDuplicate is true." 
+      description: "True only if excerpts describe the exact same entity/concept in compatible domains. False if homonyms or cross-domain metaphors." 
     },
     conceptTitle: { 
       type: "STRING", 
-      description: "Concise, canonical title for the new atomic note (no forbidden characters like : / \\ * ? \" < > |)" 
+      description: "Concise canonical title for the atomic note. If isDuplicate is false, leave empty." 
     },
     canonicalNoteMarkdown: { 
       type: "STRING", 
-      description: "Comprehensive atomic note body in Markdown: definition, core mechanisms, formulas, and context." 
+      description: "Comprehensive atomic note body in Markdown. If isDuplicate is false, leave empty." 
     },
     modifications: {
       type: "ARRAY",
+      description: "REQUIRED when isDuplicate is true: list of exact replacements, one for EVERY input fragment.",
       items: {
         type: "OBJECT",
         properties: {
           filePath: { 
             type: "STRING",
-            description: "The path of the source file being modified"
+            description: "The exact path of the source file being modified"
           },
           originalSpan: { 
             type: "STRING", 
-            description: "Exact substring from the original file to be replaced" 
+            description: "Exact substring from the original fragment text to be replaced (must match verbatim)" 
           },
           suggestedInlineSpan: { 
             type: "STRING", 
-            description: "Micro-surgical replacement that strictly preserves the author's tone, punctuation, and voice, embedding [[conceptTitle]] or [[conceptTitle|alias]]" 
+            description: "Micro-surgical replacement embedding [[conceptTitle]] or [[conceptTitle|alias]]" 
           },
           transclusionSpan: { 
             type: "STRING", 
@@ -41,6 +38,10 @@ export const refactorEngineSchema = {
         },
         required: ["filePath", "originalSpan", "suggestedInlineSpan", "transclusionSpan"]
       }
+    },
+    rejectionReason: { 
+      type: "STRING", 
+      description: "Brief 1-sentence explanation ONLY if isDuplicate is false. MUST BE EMPTY STRING '' if isDuplicate is true." 
     }
   },
   required: ["isDuplicate"]

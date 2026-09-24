@@ -66,6 +66,18 @@ export class RefactorView extends ItemView {
         await this.plugin.analyzeCluster(cluster);
         this.updateProps();
       },
+      onOpenFile: async (filePath: string) => {
+        await this.plugin.openNote(filePath);
+      },
+      onReadNoteContent: async (filePath: string) => {
+        return await this.plugin.readNoteContent(filePath);
+      },
+      onDeleteNote: async (filePath: string) => {
+        const deleted = await this.plugin.deleteNoteToTrash(filePath);
+        if (deleted) {
+          this.updateProps();
+        }
+      },
       onApplyPlan: async (cluster: CandidateCluster, plan: RefactorPlan) => {
         await this.plugin.applyRefactorPlan(cluster, plan);
         this.updateProps();

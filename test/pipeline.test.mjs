@@ -229,3 +229,24 @@ test('pathShim: correctly emulates POSIX dirname, basename, join and normalize',
   assert.strictEqual(pathShim.join('/a', 'b', 'c.wasm'), '/a/b/c.wasm');
   assert.strictEqual(pathShim.normalize('/a/b/../c/./d.wasm'), '/a/c/d.wasm');
 });
+
+test('note-comparer: accurately detects exact duplicate and partial diff', async () => {
+  const { compareNotes } = await import('../src/core/note-comparer.ts');
+
+  const contentA = `# SQL Indexing\nIndexes speed up reading data.\nHowever, too many indexes slow down writes.\n`;
+  const contentIdentical = `# SQL Indexing\nIndexes speed up reading data.\nHowever, too many indexes slow down writes.\n`;
+  const contentB = `# SQL Indexing\nIndexes significantly speed up reading data.\nHowever, excessive indexes degrade write performance.\n`;
+
+  const exactResult = compareNotes(contentA, contentIdentical);
+  assert.strictEqual(exactResult.isExactDuplicate, true);
+  assert.strictEqual(exactResult.similarityPercent, 100);
+  assert.strictEqual(exactResult.totalLinesA, 3);
+  assert.strictEqual(exactResult.totalLinesB, 3);
+  assert.strictEqual(exactResult.matchingLines, 3);
+
+  const partialResult = compareNotes(contentA, contentB);
+  assert.strictEqual(partialResult.isExactDuplicate, false);
+  assert.ok(partialResult.similarityPercent > 0 && partialResult.similarityPercent < 100);
+  assert.ok(partialResult.changes.some(c => c.added || c.removed));
+});
+

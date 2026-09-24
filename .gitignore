@@ -429,3 +429,4 @@ FodyWeavers.xsd
 *.msp
 temp/*
 data.json
+history.json

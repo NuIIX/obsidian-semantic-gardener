@@ -9,6 +9,7 @@
   } from "../../types";
   import ClusterCard from "./ClusterCard.svelte";
   import DiffCard from "./DiffCard.svelte";
+  import NoteDiffModal from "./NoteDiffModal.svelte";
   import LogPanel from "./LogPanel.svelte";
   import type { LoggerService } from "../../core/logger";
 
@@ -22,6 +23,9 @@
   export let onScanVault: () => Promise<void>;
   export let onScanActiveNote: () => Promise<void>;
   export let onAnalyzeCluster: ((cluster: CandidateCluster) => Promise<any>) | undefined = undefined;
+  export let onOpenFile: ((filePath: string) => void) | undefined = undefined;
+  export let onReadNoteContent: ((filePath: string) => Promise<string>) | undefined = undefined;
+  export let onDeleteNote: ((filePath: string) => Promise<void>) | undefined = undefined;
   export let onApplyPlan: (
     cluster: CandidateCluster,
     plan: RefactorPlan,
@@ -34,6 +38,31 @@
   let historyCount = 0;
   let activeViewMode: "list" | "detail" = "list";
   let isAnalyzingSingle = false;
+
+  let diffModalOpen = false;
+  let diffFilePathA = "";
+  let diffFilePathB = "";
+  let diffContentA = "";
+  let diffContentB = "";
+
+  $: clusterDistinctFiles = selectedCluster
+    ? Array.from(new Set(selectedCluster.chunks.map((c) => c.filePath)))
+    : [];
+
+  async function openFullNoteDiff(filePathA: string, filePathB?: string) {
+    if (!onReadNoteContent) return;
+    if (!filePathB && clusterDistinctFiles.length > 1) {
+      filePathB = clusterDistinctFiles.find((f) => f !== filePathA) || clusterDistinctFiles[0];
+    }
+    if (!filePathB) {
+      filePathB = filePathA;
+    }
+    diffFilePathA = filePathA;
+    diffFilePathB = filePathB;
+    diffContentA = await onReadNoteContent(filePathA);
+    diffContentB = filePathB !== filePathA ? await onReadNoteContent(filePathB) : diffContentA;
+    diffModalOpen = true;
+  }
 
   // Reactively consume store if provided
   $: if (store && $store) {
@@ -299,6 +328,16 @@
                   >
                     📝 Текст новой заметки
                   </button>
+                  {#if clusterDistinctFiles.length >= 2}
+                    <button
+                      type="button"
+                      class="tab-btn compare-notes-tab-btn"
+                      on:click={() => openFullNoteDiff(clusterDistinctFiles[0], clusterDistinctFiles[1])}
+                      title="Построчно сравнить две основные заметки концепта и при необходимости удалить дубликат"
+                    >
+                      📑 Сравнить заметки целиком ({clusterDistinctFiles.length})
+                    </button>
+                  {/if}
                 </div>
               {/if}
             </div>
@@ -315,6 +354,8 @@
                           breadcrumbs={selectedCluster.chunks.find(
                             (c) => c.filePath === modification.filePath,
                           )?.breadcrumbs || ""}
+                          {onOpenFile}
+                          onCompareNotes={(filePath) => openFullNoteDiff(filePath)}
                         />
                       {/each}
                     {:else}
@@ -374,6 +415,21 @@
       </main>
     </div>
   </div>
+
+  {#if diffModalOpen && onOpenFile && onDeleteNote}
+    <NoteDiffModal
+      filePathA={diffFilePathA}
+      filePathB={diffFilePathB}
+      contentA={diffContentA}
+      contentB={diffContentB}
+      onClose={() => (diffModalOpen = false)}
+      {onOpenFile}
+      onDeleteFile={async (fp) => {
+        await onDeleteNote(fp);
+        diffModalOpen = false;
+      }}
+    />
+  {/if}
 </div>
 
 <style>
@@ -708,6 +764,19 @@
     font-weight: 600;
     border-bottom: 2px solid var(--interactive-accent);
     border-radius: 0;
+  }
+
+  .compare-notes-tab-btn {
+    margin-left: auto;
+    background-color: var(--background-modifier-form-field);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-accent);
+    font-weight: 500;
+  }
+
+  .compare-notes-tab-btn:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--interactive-accent);
   }
 
   .tab-content {

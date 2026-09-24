@@ -4,6 +4,8 @@
 
   export let modification: RefactorModification;
   export let breadcrumbs: string = '';
+  export let onOpenFile: ((filePath: string) => void) | undefined = undefined;
+  export let onCompareNotes: ((filePath: string) => void) | undefined = undefined;
 
   function setMode(mode: ModificationMode) {
     modification.selectedMode = mode;
@@ -21,9 +23,42 @@
   <div class="diff-card-header">
     <div class="file-info">
       <span class="file-icon">📄</span>
-      <span class="file-path">{modification.filePath}</span>
+      {#if onOpenFile}
+        <button 
+          type="button"
+          class="file-path clickable" 
+          on:click={() => onOpenFile?.(modification.filePath)}
+          title="Кликните, чтобы открыть заметку в новой вкладке Obsidian"
+        >
+          {modification.filePath}
+        </button>
+      {:else}
+        <span class="file-path">
+          {modification.filePath}
+        </span>
+      {/if}
       {#if breadcrumbs}
         <span class="file-breadcrumbs">{breadcrumbs}</span>
+      {/if}
+      {#if onOpenFile}
+        <button 
+          type="button" 
+          class="file-action-btn" 
+          on:click={() => onOpenFile?.(modification.filePath)}
+          title="Открыть заметку в новой вкладке Obsidian"
+        >
+          📂 Открыть
+        </button>
+      {/if}
+      {#if onCompareNotes}
+        <button 
+          type="button" 
+          class="file-action-btn compare-btn" 
+          on:click={() => onCompareNotes?.(modification.filePath)}
+          title="Сравнить эту заметку целиком с другой заметкой из этого концепта"
+        >
+          📑 Сравнить целиком
+        </button>
       {/if}
     </div>
 
@@ -116,6 +151,46 @@
   .file-path {
     font-weight: 600;
     color: var(--text-normal);
+  }
+
+  button.file-path {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+  }
+
+  .file-path.clickable {
+    cursor: pointer;
+    color: var(--text-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .file-path.clickable:hover {
+    color: var(--text-accent-hover, var(--text-accent));
+  }
+
+  .file-action-btn {
+    font-size: 0.75rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .file-action-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
+  .file-action-btn.compare-btn {
+    border-color: rgba(52, 152, 219, 0.4);
+    color: var(--text-accent);
   }
 
   .file-breadcrumbs {

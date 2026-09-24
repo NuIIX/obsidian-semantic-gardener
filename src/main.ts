@@ -583,4 +583,49 @@ export default class SemanticGardenerPlugin extends Plugin {
     this.notifyViews();
     new Notice('Концепт отклонен и удален из очереди.');
   }
+
+  /**
+   * Opens the specified note in a new workspace tab.
+   */
+  async openNote(filePath: string): Promise<void> {
+    const file = this.app.vault.getAbstractFileByPath(filePath);
+    if (file instanceof TFile) {
+      await this.app.workspace.getLeaf('tab').openFile(file);
+    } else {
+      new Notice(`Файл не найден: ${filePath}`);
+    }
+  }
+
+  /**
+   * Reads the full text of a note from vault.
+   */
+  async readNoteContent(filePath: string): Promise<string> {
+    const file = this.app.vault.getAbstractFileByPath(filePath);
+    if (file instanceof TFile) {
+      return await this.app.vault.read(file);
+    }
+    return '';
+  }
+
+  /**
+   * Moves an accidental duplicate note to Obsidian vault trash (.trash) and purges its vector embeddings.
+   */
+  async deleteNoteToTrash(filePath: string): Promise<boolean> {
+    const file = this.app.vault.getAbstractFileByPath(filePath);
+    if (file instanceof TFile) {
+      const fileName = file.basename;
+      await this.app.vault.trash(file, false);
+      await this.vectorStorage.deleteFile(filePath);
+      
+      // Purge any clusters referencing the deleted file
+      this.candidateClusters = this.candidateClusters.filter(c => 
+        !c.chunks.some(chunk => chunk.filePath === filePath)
+      );
+      this.logger.info(`Заметка "${fileName}" удалена в корзину vault.`);
+      new Notice(`Заметка "${fileName}" перемещена в корзину.`);
+      this.notifyViews();
+      return true;
+    }
+    return false;
+  }
 }

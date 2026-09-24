@@ -39,8 +39,11 @@ export class SemanticGardenerSettingTab extends PluginSettingTab {
         dropdown
           .addOption('gemini-3.5-flash', 'Gemini 3.5 Flash (Рекомендуется)')
           .addOption('gemini-3.5-flash-lite', 'Gemini 3.5 Flash-Lite')
+          .addOption('gemini-3.1-flash-lite', 'Gemini 3.1 Flash-Lite')
+          .addOption('gemini-3.8-flash', 'Gemini 3.8 Flash')
+          .addOption('gemini-3.7-flash', 'Gemini 3.7 Flash')
+          .addOption('gemini-3.6-flash', 'Gemini 3.6 Flash')
           .addOption('gemini-2.5-flash', 'Gemini 2.5 Flash')
-          .addOption('gemini-1.5-pro', 'Gemini 1.5 Pro')
           .setValue(this.plugin.settings.geminiModel)
           .onChange(async (value) => {
             this.plugin.settings.geminiModel = value;
