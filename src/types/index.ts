@@ -52,6 +52,7 @@ export interface Transaction {
 
 export interface PluginSettings {
   geminiApiKey: string;
+  geminiApiKeys: string[];
   geminiModel: string;
   similarityThreshold: number;
   minChunkLength: number;
@@ -62,6 +63,7 @@ export interface PluginSettings {
 
 export const DEFAULT_SETTINGS: PluginSettings = {
   geminiApiKey: '',
+  geminiApiKeys: [],
   geminiModel: 'gemini-3.5-flash',
   similarityThreshold: 0.82,
   minChunkLength: 40,

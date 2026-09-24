@@ -34,7 +34,19 @@ export default class SemanticGardenerPlugin extends Plugin {
     this.transactionManager = new TransactionManager(this.app, this.manifest.id, this.settings.maxHistoryLength);
     await this.transactionManager.init();
 
-    this.geminiClient = new GeminiClient(this.settings.geminiApiKey, this.settings.geminiModel);
+    const initialKeys = this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0
+      ? this.settings.geminiApiKeys
+      : (this.settings.geminiApiKey ? [this.settings.geminiApiKey] : []);
+
+    this.geminiClient = new GeminiClient(
+      initialKeys,
+      this.settings.geminiModel,
+      (info) => {
+        const msg = `[LLM Gatekeeper] Лимит 429 достигнут 3 раза подряд. Ротация ключей: переход на ключ #${info.index + 1} (${info.maskedKey}) из ${info.totalKeys}.`;
+        this.logger.warn(msg);
+        new Notice(`Semantic Gardener: Квота ключа #${info.prevIndex + 1} исчерпана. Переключено на ключ #${info.index + 1}`);
+      }
+    );
     this.workerClient = new WorkerClient(this.app, this.manifest.id, this.logger);
     await this.logger.initFileLogger(this.app, this.manifest.id);
 
@@ -124,9 +136,21 @@ export default class SemanticGardenerPlugin extends Plugin {
 
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    if (!this.settings.geminiApiKeys || !Array.isArray(this.settings.geminiApiKeys)) {
+      this.settings.geminiApiKeys = this.settings.geminiApiKey ? [this.settings.geminiApiKey] : [];
+    }
+    if (this.settings.geminiApiKeys.length === 0 && this.settings.geminiApiKey) {
+      this.settings.geminiApiKeys.push(this.settings.geminiApiKey);
+    }
+    if (this.settings.geminiApiKeys.length > 0 && !this.settings.geminiApiKey) {
+      this.settings.geminiApiKey = this.settings.geminiApiKeys[0];
+    }
   }
 
   async saveSettings() {
+    if (this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0) {
+      this.settings.geminiApiKey = this.settings.geminiApiKeys[0];
+    }
     await this.saveData(this.settings);
   }
 

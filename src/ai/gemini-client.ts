@@ -1,5 +1,5 @@
-import { CandidateCluster, RefactorPlan, RefactorModification } from '../types';
-import { refactorEngineSchema, GeminiRefactorResponse } from '../types/llm-schema';
+import type { CandidateCluster, RefactorPlan, RefactorModification } from '../types/index.ts';
+import { refactorEngineSchema, type GeminiRefactorResponse } from '../types/llm-schema.ts';
 
 const SYSTEM_INSTRUCTION = `Ты — строгий редактор персональной базы знаний Zettelkasten. Твоя цель — консолидация дублирующихся концепций.
 
@@ -21,32 +21,109 @@ const SYSTEM_INSTRUCTION = `Ты — строгий редактор персо�
 - Если isDuplicate: false:
   Поля conceptTitle, canonicalNoteMarkdown и modifications должны отсутствовать или быть пустыми.`;
 
-export class GeminiClient {
-  private apiKey: string;
-  private model: string;
+export interface KeyRotationInfo {
+  index: number;
+  prevIndex: number;
+  maskedKey: string;
+  totalKeys: number;
+  reason: string;
+}
 
-  constructor(apiKey: string, model: string = 'gemini-3.5-flash-lite') {
-    this.apiKey = apiKey;
+export class GeminiClient {
+  private apiKeys: string[] = [];
+  private currentKeyIndex: number = 0;
+  private consecutive429Count: number = 0;
+  private model: string;
+  private onKeyRotated?: (info: KeyRotationInfo) => void;
+
+  constructor(
+    apiKeyOrKeys: string | string[],
+    model: string = 'gemini-3.5-flash-lite',
+    onKeyRotated?: (info: KeyRotationInfo) => void
+  ) {
     this.model = model;
+    this.onKeyRotated = onKeyRotated;
+    if (Array.isArray(apiKeyOrKeys)) {
+      this.setApiKeys(apiKeyOrKeys);
+    } else {
+      this.setApiKey(apiKeyOrKeys);
+    }
+  }
+
+  setOnKeyRotated(cb: (info: KeyRotationInfo) => void) {
+    this.onKeyRotated = cb;
+  }
+
+  setApiKeys(keys: string[]) {
+    this.apiKeys = keys.map(k => k.trim()).filter(k => k.length > 0);
+    if (this.currentKeyIndex >= this.apiKeys.length) {
+      this.currentKeyIndex = 0;
+    }
   }
 
   setApiKey(key: string) {
-    this.apiKey = key;
+    this.setApiKeys(key ? [key] : []);
   }
 
   setModel(model: string) {
     this.model = model;
   }
 
+  getActiveApiKey(): string {
+    if (this.apiKeys.length === 0) return '';
+    return this.apiKeys[this.currentKeyIndex % this.apiKeys.length];
+  }
+
+  getApiKeysCount(): number {
+    return this.apiKeys.length;
+  }
+
+  getCurrentKeyIndex(): number {
+    return this.currentKeyIndex;
+  }
+
+  getConsecutive429Count(): number {
+    return this.consecutive429Count;
+  }
+
+  rotateToNextKey(reason: string = 'Ротация ключа'): boolean {
+    if (this.apiKeys.length <= 1) return false;
+    const prevIndex = this.currentKeyIndex;
+    this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
+    this.consecutive429Count = 0;
+    const activeKey = this.getActiveApiKey();
+    const masked = this.maskKey(activeKey);
+    console.warn(`[GeminiClient] ${reason}. Переключение с ключа #${prevIndex + 1} на #${this.currentKeyIndex + 1} (${masked})`);
+    this.onKeyRotated?.({
+      index: this.currentKeyIndex,
+      prevIndex,
+      maskedKey: masked,
+      totalKeys: this.apiKeys.length,
+      reason
+    });
+    return true;
+  }
+
+  private maskKey(key: string): string {
+    if (!key || key.length <= 8) return '****';
+    return `${key.slice(0, 6)}...${key.slice(-4)}`;
+  }
+
   /**
-   * Sends a request to Gemini API with automatic rate-limit cooldown and retry.
+   * Sends a request to Gemini API with automatic rate-limit cooldown, retry, and multi-key rotation on 429.
    */
   private async postToGemini(requestBody: any): Promise<string> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey.trim()}`;
-    const maxRetries = 3;
+    const totalSlots = Math.max(1, this.apiKeys.length);
+    const maxAttempts = Math.max(3, totalSlots * 3);
     let lastError: Error | null = null;
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const activeKey = this.getActiveApiKey();
+      if (!activeKey) {
+        throw new Error('API ключ Gemini не настроен. Укажите ваш Google AI Studio API-ключ в настройках плагина.');
+      }
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${activeKey}`;
       let response: Response;
       try {
         response = await fetch(url, {
@@ -56,8 +133,8 @@ export class GeminiClient {
         });
       } catch (netErr: any) {
         lastError = new Error(`Сетевая ошибка при запросе к Gemini API: ${netErr.message}`);
-        if (attempt < maxRetries) {
-          await new Promise(r => setTimeout(r, 2000 * attempt));
+        if (attempt < maxAttempts) {
+          await new Promise(r => setTimeout(r, 2000));
           continue;
         }
         throw lastError;
@@ -71,20 +148,45 @@ export class GeminiClient {
           parsedError = errJson.error?.message || errorText;
         } catch { }
 
-        // Handle 429 (quota / rate limit) and 503 (transient server unavailable) with backoff
-        if ((response.status === 429 || response.status === 503) && attempt < maxRetries) {
-          let retryDelayMs = 25000;
-          const match = parsedError.match(/retry in\s+([0-9.]+)\s*s/i);
-          if (match && match[1]) {
-            retryDelayMs = Math.ceil(parseFloat(match[1]) * 1000) + 1500;
+        // Handle 429: Rate Limit / Quota Exceeded
+        if (response.status === 429) {
+          this.consecutive429Count++;
+          console.warn(`[GeminiClient] Ошибка 429 (подряд: ${this.consecutive429Count}) на ключе #${this.currentKeyIndex + 1} (${this.maskKey(activeKey)})`);
+
+          // Если получено 3 ошибки 429 подряд и есть другие ключи — сразу переключаемся на следующий ключ!
+          if (this.consecutive429Count >= 3 && this.apiKeys.length > 1) {
+            const rotated = this.rotateToNextKey('Ключ исчерпал лимит квот 3 раза подряд');
+            if (rotated && attempt < maxAttempts) {
+              // Новый ключ имеет независимую квоту — пробуем сразу без минутного сна!
+              continue;
+            }
           }
-          console.warn(`[GeminiClient] Quota limit (${response.status}) hit. Cooldown ${Math.round(retryDelayMs / 1000)}s before retry ${attempt}/${maxRetries}...`);
-          await new Promise(r => setTimeout(r, retryDelayMs));
+
+          // Если других ключей нет или ошибок подряд меньше 3:
+          if (attempt < maxAttempts) {
+            let retryDelayMs = 25000;
+            const match = parsedError.match(/retry in\s+([0-9.]+)\s*s/i);
+            if (match && match[1]) {
+              retryDelayMs = Math.ceil(parseFloat(match[1]) * 1000) + 1500;
+            }
+            console.warn(`[GeminiClient] Ожидание квоты ${Math.round(retryDelayMs / 1000)}с перед повторной попыткой ${attempt}/${maxAttempts}...`);
+            await new Promise(r => setTimeout(r, retryDelayMs));
+            continue;
+          }
+        }
+
+        // Handle 503 (transient server unavailable) with short backoff
+        if (response.status === 503 && attempt < maxAttempts) {
+          console.warn(`[GeminiClient] Сервис временно недоступен (503). Повтор через 5с...`);
+          await new Promise(r => setTimeout(r, 5000));
           continue;
         }
 
         throw new Error(`Ошибка Gemini API (${response.status}): ${parsedError}`);
       }
+
+      // Успешный HTTP 200 ответ: сбрасываем серию 429 ошибок
+      this.consecutive429Count = 0;
 
       const data = await response.json();
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -94,7 +196,7 @@ export class GeminiClient {
       return rawText;
     }
 
-    throw lastError || new Error('Не удалось получить ответ от Gemini API.');
+    throw lastError || new Error('Не удалось получить ответ от Gemini API после всех попыток и ротаций ключей.');
   }
 
   /**
@@ -162,7 +264,7 @@ ${promptText}
    * Evaluates a candidate cluster through Gemini's Gatekeeper and Micro-Surgical pipeline.
    */
   async validateAndRefactorCluster(cluster: CandidateCluster): Promise<RefactorPlan> {
-    if (!this.apiKey || this.apiKey.trim().length === 0) {
+    if (!this.getActiveApiKey()) {
       throw new Error('API ключ Gemini не настроен. Укажите ваш Google AI Studio API-ключ в настройках плагина.');
     }
 

@@ -39,6 +39,7 @@ var import_obsidian5 = require("obsidian");
 // src/types/index.ts
 var DEFAULT_SETTINGS = {
   geminiApiKey: "",
+  geminiApiKeys: [],
   geminiModel: "gemini-3.5-flash",
   similarityThreshold: 0.82,
   minChunkLength: 40,
@@ -59,13 +60,61 @@ var SemanticGardenerSettingTab = class extends import_obsidian.PluginSettingTab 
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Semantic Gardener \u2014 \u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438" });
-    new import_obsidian.Setting(containerEl).setName("Google AI Studio API Key (BYOK)").setDesc("\u0412\u0430\u0448 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0439 API-\u043A\u043B\u044E\u0447 Gemini \u0434\u043B\u044F \u0440\u0430\u0431\u043E\u0442\u044B Gatekeeper \u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433\u0430.").addText((text2) => {
-      text2.setPlaceholder("AIzaSy...").setValue(this.plugin.settings.geminiApiKey).onChange(async (value) => {
-        this.plugin.settings.geminiApiKey = value.trim();
-        this.plugin.geminiClient.setApiKey(value.trim());
-        await this.plugin.saveSettings();
+    if (!this.plugin.settings.geminiApiKeys || !Array.isArray(this.plugin.settings.geminiApiKeys)) {
+      this.plugin.settings.geminiApiKeys = this.plugin.settings.geminiApiKey ? [this.plugin.settings.geminiApiKey] : [""];
+    }
+    if (this.plugin.settings.geminiApiKeys.length === 0) {
+      this.plugin.settings.geminiApiKeys = [""];
+    }
+    const keyList = this.plugin.settings.geminiApiKeys;
+    new import_obsidian.Setting(containerEl).setName("\u041A\u043B\u044E\u0447\u0438 Google AI Studio API (BYOK)").setDesc("\u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u043E\u0434\u0438\u043D \u0438\u043B\u0438 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E API-\u043A\u043B\u044E\u0447\u0435\u0439 Gemini. \u041F\u0440\u0438 \u0438\u0441\u0447\u0435\u0440\u043F\u0430\u043D\u0438\u0438 \u0441\u0443\u0442\u043E\u0447\u043D\u043E\u0433\u043E \u043B\u0438\u043C\u0438\u0442\u0430 (3 \u043E\u0448\u0438\u0431\u043A\u0438 429 \u043F\u043E\u0434\u0440\u044F\u0434) \u043F\u043B\u0430\u0433\u0438\u043D \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u0441\u044F \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u043A\u043B\u044E\u0447.").setHeading();
+    keyList.forEach((key2, index2) => {
+      const setting = new import_obsidian.Setting(containerEl).setName(index2 === 0 ? "\u041E\u0441\u043D\u043E\u0432\u043D\u043E\u0439 API-\u043A\u043B\u044E\u0447" : `\u0420\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0439 \u043A\u043B\u044E\u0447 #${index2 + 1}`).setDesc(index2 === 0 ? "\u041F\u0435\u0440\u0432\u0438\u0447\u043D\u044B\u0439 \u043A\u043B\u044E\u0447 \u0434\u043B\u044F \u0440\u0430\u0431\u043E\u0442\u044B Gatekeeper \u0438 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433\u0430." : `\u0420\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0439 \u043A\u043B\u044E\u0447 \u0434\u043B\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0440\u043E\u0442\u0430\u0446\u0438\u0438.`);
+      let textInputEl = null;
+      setting.addText((text2) => {
+        textInputEl = text2.inputEl;
+        text2.setPlaceholder("AIzaSy...").setValue(key2).onChange(async (value) => {
+          this.plugin.settings.geminiApiKeys[index2] = value.trim();
+          this.plugin.settings.geminiApiKey = this.plugin.settings.geminiApiKeys[0] || "";
+          this.plugin.geminiClient.setApiKeys(this.plugin.settings.geminiApiKeys);
+          await this.plugin.saveSettings();
+        });
+        text2.inputEl.type = "password";
       });
-      text2.inputEl.type = "password";
+      if (index2 === keyList.length - 1) {
+        setting.addButton((button) => {
+          button.setButtonText("+").setTooltip("\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0439 API-\u043A\u043B\u044E\u0447").setCta();
+          const canAdd = Boolean(key2 && key2.trim().length > 0);
+          button.setDisabled(!canAdd);
+          if (textInputEl) {
+            textInputEl.addEventListener("input", () => {
+              const hasText = (textInputEl?.value || "").trim().length > 0;
+              button.setDisabled(!hasText);
+            });
+          }
+          button.onClick(async () => {
+            const currentVal = this.plugin.settings.geminiApiKeys[index2]?.trim() || "";
+            if (currentVal.length === 0) return;
+            this.plugin.settings.geminiApiKeys.push("");
+            await this.plugin.saveSettings();
+            this.display();
+          });
+        });
+      }
+      if (keyList.length > 1) {
+        setting.addButton((button) => {
+          button.setButtonText("\u{1F5D1}").setTooltip(`\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u043A\u043B\u044E\u0447 #${index2 + 1}`).setWarning().onClick(async () => {
+            this.plugin.settings.geminiApiKeys.splice(index2, 1);
+            if (this.plugin.settings.geminiApiKeys.length === 0) {
+              this.plugin.settings.geminiApiKeys.push("");
+            }
+            this.plugin.settings.geminiApiKey = this.plugin.settings.geminiApiKeys[0] || "";
+            this.plugin.geminiClient.setApiKeys(this.plugin.settings.geminiApiKeys);
+            await this.plugin.saveSettings();
+            this.display();
+          });
+        });
+      }
     });
     new import_obsidian.Setting(containerEl).setName("\u041C\u043E\u0434\u0435\u043B\u044C Gemini").setDesc("\u041C\u043E\u0434\u0435\u043B\u044C \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u043E\u0432 \u0438 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0437\u0430\u043C\u0435\u043D.").addDropdown((dropdown) => {
       dropdown.addOption("gemini-3.5-flash", "Gemini 3.5 Flash (\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F)").addOption("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite").addOption("gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite").addOption("gemini-3.8-flash", "Gemini 3.8 Flash").addOption("gemini-3.7-flash", "Gemini 3.7 Flash").addOption("gemini-3.6-flash", "Gemini 3.6 Flash").addOption("gemini-2.5-flash", "Gemini 2.5 Flash").setValue(this.plugin.settings.geminiModel).onChange(async (value) => {
@@ -9228,26 +9277,82 @@ var SYSTEM_INSTRUCTION = `\u0422\u044B \u2014 \u0441\u0442\u0440\u043E\u0433\u04
 - \u0415\u0441\u043B\u0438 isDuplicate: false:
   \u041F\u043E\u043B\u044F conceptTitle, canonicalNoteMarkdown \u0438 modifications \u0434\u043E\u043B\u0436\u043D\u044B \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u043E\u0432\u0430\u0442\u044C \u0438\u043B\u0438 \u0431\u044B\u0442\u044C \u043F\u0443\u0441\u0442\u044B\u043C\u0438.`;
 var GeminiClient = class {
-  apiKey;
+  apiKeys = [];
+  currentKeyIndex = 0;
+  consecutive429Count = 0;
   model;
-  constructor(apiKey, model = "gemini-3.5-flash-lite") {
-    this.apiKey = apiKey;
+  onKeyRotated;
+  constructor(apiKeyOrKeys, model = "gemini-3.5-flash-lite", onKeyRotated) {
     this.model = model;
+    this.onKeyRotated = onKeyRotated;
+    if (Array.isArray(apiKeyOrKeys)) {
+      this.setApiKeys(apiKeyOrKeys);
+    } else {
+      this.setApiKey(apiKeyOrKeys);
+    }
+  }
+  setOnKeyRotated(cb) {
+    this.onKeyRotated = cb;
+  }
+  setApiKeys(keys) {
+    this.apiKeys = keys.map((k) => k.trim()).filter((k) => k.length > 0);
+    if (this.currentKeyIndex >= this.apiKeys.length) {
+      this.currentKeyIndex = 0;
+    }
   }
   setApiKey(key2) {
-    this.apiKey = key2;
+    this.setApiKeys(key2 ? [key2] : []);
   }
   setModel(model) {
     this.model = model;
   }
+  getActiveApiKey() {
+    if (this.apiKeys.length === 0) return "";
+    return this.apiKeys[this.currentKeyIndex % this.apiKeys.length];
+  }
+  getApiKeysCount() {
+    return this.apiKeys.length;
+  }
+  getCurrentKeyIndex() {
+    return this.currentKeyIndex;
+  }
+  getConsecutive429Count() {
+    return this.consecutive429Count;
+  }
+  rotateToNextKey(reason = "\u0420\u043E\u0442\u0430\u0446\u0438\u044F \u043A\u043B\u044E\u0447\u0430") {
+    if (this.apiKeys.length <= 1) return false;
+    const prevIndex = this.currentKeyIndex;
+    this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
+    this.consecutive429Count = 0;
+    const activeKey = this.getActiveApiKey();
+    const masked = this.maskKey(activeKey);
+    console.warn(`[GeminiClient] ${reason}. \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435 \u0441 \u043A\u043B\u044E\u0447\u0430 #${prevIndex + 1} \u043D\u0430 #${this.currentKeyIndex + 1} (${masked})`);
+    this.onKeyRotated?.({
+      index: this.currentKeyIndex,
+      prevIndex,
+      maskedKey: masked,
+      totalKeys: this.apiKeys.length,
+      reason
+    });
+    return true;
+  }
+  maskKey(key2) {
+    if (!key2 || key2.length <= 8) return "****";
+    return `${key2.slice(0, 6)}...${key2.slice(-4)}`;
+  }
   /**
-   * Sends a request to Gemini API with automatic rate-limit cooldown and retry.
+   * Sends a request to Gemini API with automatic rate-limit cooldown, retry, and multi-key rotation on 429.
    */
   async postToGemini(requestBody) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey.trim()}`;
-    const maxRetries = 3;
+    const totalSlots = Math.max(1, this.apiKeys.length);
+    const maxAttempts = Math.max(3, totalSlots * 3);
     let lastError = null;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const activeKey = this.getActiveApiKey();
+      if (!activeKey) {
+        throw new Error("API \u043A\u043B\u044E\u0447 Gemini \u043D\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D. \u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u0432\u0430\u0448 Google AI Studio API-\u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445 \u043F\u043B\u0430\u0433\u0438\u043D\u0430.");
+      }
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${activeKey}`;
       let response;
       try {
         response = await fetch(url, {
@@ -9257,8 +9362,8 @@ var GeminiClient = class {
         });
       } catch (netErr) {
         lastError = new Error(`\u0421\u0435\u0442\u0435\u0432\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0437\u0430\u043F\u0440\u043E\u0441\u0435 \u043A Gemini API: ${netErr.message}`);
-        if (attempt < maxRetries) {
-          await new Promise((r) => setTimeout(r, 2e3 * attempt));
+        if (attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, 2e3));
           continue;
         }
         throw lastError;
@@ -9271,18 +9376,34 @@ var GeminiClient = class {
           parsedError = errJson.error?.message || errorText;
         } catch {
         }
-        if ((response.status === 429 || response.status === 503) && attempt < maxRetries) {
-          let retryDelayMs = 25e3;
-          const match = parsedError.match(/retry in\s+([0-9.]+)\s*s/i);
-          if (match && match[1]) {
-            retryDelayMs = Math.ceil(parseFloat(match[1]) * 1e3) + 1500;
+        if (response.status === 429) {
+          this.consecutive429Count++;
+          console.warn(`[GeminiClient] \u041E\u0448\u0438\u0431\u043A\u0430 429 (\u043F\u043E\u0434\u0440\u044F\u0434: ${this.consecutive429Count}) \u043D\u0430 \u043A\u043B\u044E\u0447\u0435 #${this.currentKeyIndex + 1} (${this.maskKey(activeKey)})`);
+          if (this.consecutive429Count >= 3 && this.apiKeys.length > 1) {
+            const rotated = this.rotateToNextKey("\u041A\u043B\u044E\u0447 \u0438\u0441\u0447\u0435\u0440\u043F\u0430\u043B \u043B\u0438\u043C\u0438\u0442 \u043A\u0432\u043E\u0442 3 \u0440\u0430\u0437\u0430 \u043F\u043E\u0434\u0440\u044F\u0434");
+            if (rotated && attempt < maxAttempts) {
+              continue;
+            }
           }
-          console.warn(`[GeminiClient] Quota limit (${response.status}) hit. Cooldown ${Math.round(retryDelayMs / 1e3)}s before retry ${attempt}/${maxRetries}...`);
-          await new Promise((r) => setTimeout(r, retryDelayMs));
+          if (attempt < maxAttempts) {
+            let retryDelayMs = 25e3;
+            const match = parsedError.match(/retry in\s+([0-9.]+)\s*s/i);
+            if (match && match[1]) {
+              retryDelayMs = Math.ceil(parseFloat(match[1]) * 1e3) + 1500;
+            }
+            console.warn(`[GeminiClient] \u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u043A\u0432\u043E\u0442\u044B ${Math.round(retryDelayMs / 1e3)}\u0441 \u043F\u0435\u0440\u0435\u0434 \u043F\u043E\u0432\u0442\u043E\u0440\u043D\u043E\u0439 \u043F\u043E\u043F\u044B\u0442\u043A\u043E\u0439 ${attempt}/${maxAttempts}...`);
+            await new Promise((r) => setTimeout(r, retryDelayMs));
+            continue;
+          }
+        }
+        if (response.status === 503 && attempt < maxAttempts) {
+          console.warn(`[GeminiClient] \u0421\u0435\u0440\u0432\u0438\u0441 \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D (503). \u041F\u043E\u0432\u0442\u043E\u0440 \u0447\u0435\u0440\u0435\u0437 5\u0441...`);
+          await new Promise((r) => setTimeout(r, 5e3));
           continue;
         }
         throw new Error(`\u041E\u0448\u0438\u0431\u043A\u0430 Gemini API (${response.status}): ${parsedError}`);
       }
+      this.consecutive429Count = 0;
       const data = await response.json();
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!rawText) {
@@ -9290,7 +9411,7 @@ var GeminiClient = class {
       }
       return rawText;
     }
-    throw lastError || new Error("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u043E\u0442\u0432\u0435\u0442 \u043E\u0442 Gemini API.");
+    throw lastError || new Error("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u043E\u0442\u0432\u0435\u0442 \u043E\u0442 Gemini API \u043F\u043E\u0441\u043B\u0435 \u0432\u0441\u0435\u0445 \u043F\u043E\u043F\u044B\u0442\u043E\u043A \u0438 \u0440\u043E\u0442\u0430\u0446\u0438\u0439 \u043A\u043B\u044E\u0447\u0435\u0439.");
   }
   /**
    * Self-healing repair block: requests the model to repair invalid JSON or incomplete plan.
@@ -9349,7 +9470,7 @@ ${promptText}
    * Evaluates a candidate cluster through Gemini's Gatekeeper and Micro-Surgical pipeline.
    */
   async validateAndRefactorCluster(cluster) {
-    if (!this.apiKey || this.apiKey.trim().length === 0) {
+    if (!this.getActiveApiKey()) {
       throw new Error("API \u043A\u043B\u044E\u0447 Gemini \u043D\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D. \u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u0432\u0430\u0448 Google AI Studio API-\u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445 \u043F\u043B\u0430\u0433\u0438\u043D\u0430.");
     }
     const clusterPromptPayload = cluster.chunks.map((chunk, idx) => {
@@ -10357,7 +10478,16 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
     this.vectorStorage = new VectorStorage();
     this.transactionManager = new TransactionManager(this.app, this.manifest.id, this.settings.maxHistoryLength);
     await this.transactionManager.init();
-    this.geminiClient = new GeminiClient(this.settings.geminiApiKey, this.settings.geminiModel);
+    const initialKeys = this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0 ? this.settings.geminiApiKeys : this.settings.geminiApiKey ? [this.settings.geminiApiKey] : [];
+    this.geminiClient = new GeminiClient(
+      initialKeys,
+      this.settings.geminiModel,
+      (info) => {
+        const msg = `[LLM Gatekeeper] \u041B\u0438\u043C\u0438\u0442 429 \u0434\u043E\u0441\u0442\u0438\u0433\u043D\u0443\u0442 3 \u0440\u0430\u0437\u0430 \u043F\u043E\u0434\u0440\u044F\u0434. \u0420\u043E\u0442\u0430\u0446\u0438\u044F \u043A\u043B\u044E\u0447\u0435\u0439: \u043F\u0435\u0440\u0435\u0445\u043E\u0434 \u043D\u0430 \u043A\u043B\u044E\u0447 #${info.index + 1} (${info.maskedKey}) \u0438\u0437 ${info.totalKeys}.`;
+        this.logger.warn(msg);
+        new import_obsidian5.Notice(`Semantic Gardener: \u041A\u0432\u043E\u0442\u0430 \u043A\u043B\u044E\u0447\u0430 #${info.prevIndex + 1} \u0438\u0441\u0447\u0435\u0440\u043F\u0430\u043D\u0430. \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u043D\u0430 \u043A\u043B\u044E\u0447 #${info.index + 1}`);
+      }
+    );
     this.workerClient = new WorkerClient(this.app, this.manifest.id, this.logger);
     await this.logger.initFileLogger(this.app, this.manifest.id);
     this.workerClient.setModelProgressListener((file, percent) => {
@@ -10428,8 +10558,20 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    if (!this.settings.geminiApiKeys || !Array.isArray(this.settings.geminiApiKeys)) {
+      this.settings.geminiApiKeys = this.settings.geminiApiKey ? [this.settings.geminiApiKey] : [];
+    }
+    if (this.settings.geminiApiKeys.length === 0 && this.settings.geminiApiKey) {
+      this.settings.geminiApiKeys.push(this.settings.geminiApiKey);
+    }
+    if (this.settings.geminiApiKeys.length > 0 && !this.settings.geminiApiKey) {
+      this.settings.geminiApiKey = this.settings.geminiApiKeys[0];
+    }
   }
   async saveSettings() {
+    if (this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0) {
+      this.settings.geminiApiKey = this.settings.geminiApiKeys[0];
+    }
     await this.saveData(this.settings);
   }
   async activateView() {

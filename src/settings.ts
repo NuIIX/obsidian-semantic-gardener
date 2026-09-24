@@ -15,21 +15,90 @@ export class SemanticGardenerSettingTab extends PluginSettingTab {
 
     containerEl.createEl('h2', { text: 'Semantic Gardener — Настройки' });
 
-    // 1. Gemini API Key (BYOK)
+    // 1. Gemini API Keys (BYOK with Multi-key Rotation on 429)
+    if (!this.plugin.settings.geminiApiKeys || !Array.isArray(this.plugin.settings.geminiApiKeys)) {
+      this.plugin.settings.geminiApiKeys = this.plugin.settings.geminiApiKey ? [this.plugin.settings.geminiApiKey] : [''];
+    }
+    if (this.plugin.settings.geminiApiKeys.length === 0) {
+      this.plugin.settings.geminiApiKeys = [''];
+    }
+
+    const keyList = this.plugin.settings.geminiApiKeys;
+
     new Setting(containerEl)
-      .setName('Google AI Studio API Key (BYOK)')
-      .setDesc('Ваш персональный API-ключ Gemini для работы Gatekeeper и микрохирургического рефакторинга.')
-      .addText(text => {
+      .setName('Ключи Google AI Studio API (BYOK)')
+      .setDesc('Укажите один или несколько API-ключей Gemini. При исчерпании суточного лимита (3 ошибки 429 подряд) плагин автоматически переключится на следующий ключ.')
+      .setHeading();
+
+    keyList.forEach((key, index) => {
+      const setting = new Setting(containerEl)
+        .setName(index === 0 ? 'Основной API-ключ' : `Резервный ключ #${index + 1}`)
+        .setDesc(index === 0 ? 'Первичный ключ для работы Gatekeeper и рефакторинга.' : `Резервный ключ для автоматической ротации.`);
+
+      let textInputEl: HTMLInputElement | null = null;
+
+      setting.addText(text => {
+        textInputEl = text.inputEl;
         text
           .setPlaceholder('AIzaSy...')
-          .setValue(this.plugin.settings.geminiApiKey)
+          .setValue(key)
           .onChange(async (value) => {
-            this.plugin.settings.geminiApiKey = value.trim();
-            this.plugin.geminiClient.setApiKey(value.trim());
+            this.plugin.settings.geminiApiKeys[index] = value.trim();
+            this.plugin.settings.geminiApiKey = this.plugin.settings.geminiApiKeys[0] || '';
+            this.plugin.geminiClient.setApiKeys(this.plugin.settings.geminiApiKeys);
             await this.plugin.saveSettings();
           });
         text.inputEl.type = 'password';
       });
+
+      // '+' button on the last key field to append next key
+      if (index === keyList.length - 1) {
+        setting.addButton(button => {
+          button
+            .setButtonText('+')
+            .setTooltip('Добавить следующий резервный API-ключ')
+            .setCta();
+
+          const canAdd = Boolean(key && key.trim().length > 0);
+          button.setDisabled(!canAdd);
+
+          if (textInputEl) {
+            textInputEl.addEventListener('input', () => {
+              const hasText = (textInputEl?.value || '').trim().length > 0;
+              button.setDisabled(!hasText);
+            });
+          }
+
+          button.onClick(async () => {
+            const currentVal = this.plugin.settings.geminiApiKeys[index]?.trim() || '';
+            if (currentVal.length === 0) return;
+            this.plugin.settings.geminiApiKeys.push('');
+            await this.plugin.saveSettings();
+            this.display();
+          });
+        });
+      }
+
+      // Delete button when there are 2 or more keys
+      if (keyList.length > 1) {
+        setting.addButton(button => {
+          button
+            .setButtonText('🗑')
+            .setTooltip(`Удалить ключ #${index + 1}`)
+            .setWarning()
+            .onClick(async () => {
+              this.plugin.settings.geminiApiKeys.splice(index, 1);
+              if (this.plugin.settings.geminiApiKeys.length === 0) {
+                this.plugin.settings.geminiApiKeys.push('');
+              }
+              this.plugin.settings.geminiApiKey = this.plugin.settings.geminiApiKeys[0] || '';
+              this.plugin.geminiClient.setApiKeys(this.plugin.settings.geminiApiKeys);
+              await this.plugin.saveSettings();
+              this.display();
+            });
+        });
+      }
+    });
 
     // 2. Gemini Model Selection
     new Setting(containerEl)

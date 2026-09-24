@@ -250,3 +250,37 @@ test('note-comparer: accurately detects exact duplicate and partial diff', async
   assert.ok(partialResult.changes.some(c => c.added || c.removed));
 });
 
+test('GeminiClient: multi-key pool rotates to next key on rotation and wraps around', async () => {
+  const { GeminiClient } = await import('../src/ai/gemini-client.ts');
+  const rotatedEvents = [];
+  const client = new GeminiClient(
+    ['key-1-alpha', 'key-2-beta', 'key-3-gamma'],
+    'gemini-3.5-flash',
+    (info) => rotatedEvents.push(info)
+  );
+
+  assert.strictEqual(client.getActiveApiKey(), 'key-1-alpha');
+  assert.strictEqual(client.getApiKeysCount(), 3);
+  assert.strictEqual(client.getCurrentKeyIndex(), 0);
+
+  // Rotate key
+  const rotated = client.rotateToNextKey('Тест ротации');
+  assert.strictEqual(rotated, true);
+  assert.strictEqual(client.getActiveApiKey(), 'key-2-beta');
+  assert.strictEqual(client.getCurrentKeyIndex(), 1);
+  assert.strictEqual(rotatedEvents.length, 1);
+  assert.strictEqual(rotatedEvents[0].prevIndex, 0);
+  assert.strictEqual(rotatedEvents[0].index, 1);
+
+  // Rotate again
+  client.rotateToNextKey('Тест ротации 2');
+  assert.strictEqual(client.getActiveApiKey(), 'key-3-gamma');
+  assert.strictEqual(client.getCurrentKeyIndex(), 2);
+
+  // Wrap around to 0
+  client.rotateToNextKey('Тест ротации 3');
+  assert.strictEqual(client.getActiveApiKey(), 'key-1-alpha');
+  assert.strictEqual(client.getCurrentKeyIndex(), 0);
+});
+
+
