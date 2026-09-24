@@ -59,6 +59,7 @@ export interface PluginSettings {
   conceptsFolder: string;
   maxHistoryLength: number;
   excludedFolders: string;
+  autoGatekeeperBatchLimit: number;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -69,7 +70,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   minChunkLength: 40,
   conceptsFolder: 'Concepts',
   maxHistoryLength: 20,
-  excludedFolders: '.obsidian, .trash, templates, archive'
+  excludedFolders: '.obsidian, .trash, templates, archive',
+  autoGatekeeperBatchLimit: 30
 };
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'progress';

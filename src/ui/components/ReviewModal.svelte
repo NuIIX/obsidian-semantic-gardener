@@ -26,6 +26,8 @@
   export let onOpenFile: ((filePath: string) => void) | undefined = undefined;
   export let onReadNoteContent: ((filePath: string) => Promise<string>) | undefined = undefined;
   export let onDeleteNote: ((filePath: string) => Promise<void>) | undefined = undefined;
+  export let onAnalyzeNextBatch: ((size?: number) => Promise<any>) | undefined = undefined;
+  export let onApplyAllApproved: (() => Promise<any>) | undefined = undefined;
   export let onApplyPlan: (
     cluster: CandidateCluster,
     plan: RefactorPlan,
@@ -38,12 +40,37 @@
   let historyCount = 0;
   let activeViewMode: "list" | "detail" = "list";
   let isAnalyzingSingle = false;
+  let isAnalyzingBatch = false;
+  let isApplyingBatch = false;
+
+  let searchQuery = "";
+  let activeFilterTab: "all" | "approved" | "rejected" | "pending" = "all";
 
   let diffModalOpen = false;
   let diffFilePathA = "";
   let diffFilePathB = "";
   let diffContentA = "";
   let diffContentB = "";
+
+  $: approvedCount = clusters.filter(c => plans[c.id]?.isDuplicate).length;
+  $: rejectedCount = clusters.filter(c => plans[c.id] && !plans[c.id].isDuplicate).length;
+  $: pendingCount = clusters.filter(c => !plans[c.id]).length;
+
+  $: filteredClusters = clusters.filter(cluster => {
+    const plan = plans[cluster.id];
+    if (activeFilterTab === "approved" && !plan?.isDuplicate) return false;
+    if (activeFilterTab === "rejected" && (!plan || plan.isDuplicate)) return false;
+    if (activeFilterTab === "pending" && plan !== undefined) return false;
+
+    if (searchQuery.trim().length > 0) {
+      const q = searchQuery.toLowerCase();
+      const matchesTitle = plan?.conceptTitle?.toLowerCase().includes(q) || false;
+      const matchesFile = cluster.chunks.some(c => c.filePath.toLowerCase().includes(q));
+      const matchesBreadcrumbs = cluster.chunks.some(c => c.breadcrumbs.toLowerCase().includes(q));
+      return matchesTitle || matchesFile || matchesBreadcrumbs;
+    }
+    return true;
+  });
 
   $: clusterDistinctFiles = selectedCluster
     ? Array.from(new Set(selectedCluster.chunks.map((c) => c.filePath)))
@@ -85,12 +112,13 @@
   }
 
   $: selectedCluster =
+    filteredClusters.find((c) => c.id === selectedClusterId) ||
     clusters.find((c) => c.id === selectedClusterId) ||
-    (clusters.length > 0 ? clusters[0] : null);
+    (filteredClusters.length > 0 ? filteredClusters[0] : (clusters.length > 0 ? clusters[0] : null));
   $: selectedPlan = selectedCluster ? plans[selectedCluster.id] : null;
 
-  $: if (!selectedClusterId && clusters.length > 0) {
-    selectedClusterId = clusters[0].id;
+  $: if (!selectedClusterId && filteredClusters.length > 0) {
+    selectedClusterId = filteredClusters[0].id;
   }
 
   function selectCluster(id: string) {
@@ -135,6 +163,34 @@
     await onUndoLast();
     updateHistoryCount();
   }
+
+  async function handleAnalyzeBatch() {
+    if (!onAnalyzeNextBatch) return;
+    isAnalyzingBatch = true;
+    try {
+      await onAnalyzeNextBatch(20);
+      if (plugin?.refactorPlans) {
+        plans = { ...plugin.refactorPlans };
+      }
+    } finally {
+      isAnalyzingBatch = false;
+    }
+  }
+
+  async function handleApplyAllApproved() {
+    if (!onApplyAllApproved) return;
+    isApplyingBatch = true;
+    try {
+      await onApplyAllApproved();
+      if (plugin?.candidateClusters) {
+        clusters = [...plugin.candidateClusters];
+        plans = { ...plugin.refactorPlans };
+      }
+      updateHistoryCount();
+    } finally {
+      isApplyingBatch = false;
+    }
+  }
 </script>
 
 <div class="semantic-gardener-container">
@@ -170,6 +226,18 @@
           <span class="btn-text">Сканировать Vault</span>
         </button>
 
+        {#if onApplyAllApproved && approvedCount > 0}
+          <button
+            class="sg-btn sg-btn-success"
+            on:click={handleApplyAllApproved}
+            disabled={isApplyingBatch || isScanning}
+            title="Применить все одобренные планы рефакторинга"
+          >
+            <span class="btn-icon">🚀</span>
+            <span class="btn-text">{isApplyingBatch ? "Применение..." : `Применить все (${approvedCount})`}</span>
+          </button>
+        {/if}
+
         <button
           class="sg-btn sg-btn-undo"
           on:click={handleUndo}
@@ -191,23 +259,90 @@
       <aside class="sg-sidebar">
         <div class="sidebar-header">
           <span>Очередь концептов</span>
-          <span class="count-pill">{clusters.length}</span>
+          <span class="count-pill">{filteredClusters.length} / {clusters.length}</span>
+        </div>
+
+        <div class="sidebar-controls">
+          <div class="sidebar-search-box">
+            <span class="search-icon">🔍</span>
+            <input
+              type="text"
+              class="sidebar-search-input"
+              placeholder="Поиск по концептам и файлам..."
+              bind:value={searchQuery}
+            />
+            {#if searchQuery}
+              <button
+                type="button"
+                class="search-clear-btn"
+                on:click={() => (searchQuery = "")}
+                title="Очистить"
+              >✕</button>
+            {/if}
+          </div>
+
+          <div class="filter-chips">
+            <button
+              type="button"
+              class="chip-btn"
+              class:active={activeFilterTab === "all"}
+              on:click={() => (activeFilterTab = "all")}
+            >
+              Все ({clusters.length})
+            </button>
+            <button
+              type="button"
+              class="chip-btn chip-approved"
+              class:active={activeFilterTab === "approved"}
+              on:click={() => (activeFilterTab = "approved")}
+              title="Дубликаты, требующие слияния"
+            >
+              ✓ ({approvedCount})
+            </button>
+            <button
+              type="button"
+              class="chip-btn chip-rejected"
+              class:active={activeFilterTab === "rejected"}
+              on:click={() => (activeFilterTab = "rejected")}
+              title="Разные концепты (отклонено ИИ)"
+            >
+              ✕ ({rejectedCount})
+            </button>
+            <button
+              type="button"
+              class="chip-btn chip-pending"
+              class:active={activeFilterTab === "pending"}
+              on:click={() => (activeFilterTab = "pending")}
+              title="Ожидают анализа Gatekeeper"
+            >
+              ⏳ ({pendingCount})
+            </button>
+          </div>
         </div>
 
         <div class="cluster-list">
-          {#if clusters.length === 0}
+          {#if filteredClusters.length === 0}
             <div class="empty-clusters">
               {#if isScanning}
                 <p>Выполняется сканирование хранилища...</p>
-              {:else}
+              {:else if clusters.length === 0}
                 <p>Дубликатов не найдено или хранилище еще не просканировано.</p>
                 <button class="sg-btn sg-btn-sm" on:click={onScanVault}
                   >Запустить сканирование</button
                 >
+              {:else}
+                <p>По выбранным фильтрам ничего не найдено.</p>
+                <button
+                  type="button"
+                  class="sg-btn sg-btn-sm"
+                  on:click={() => { searchQuery = ""; activeFilterTab = "all"; }}
+                >
+                  Сбросить фильтры
+                </button>
               {/if}
             </div>
           {:else}
-            {#each clusters as cluster (cluster.id)}
+            {#each filteredClusters as cluster (cluster.id)}
               <ClusterCard
                 {cluster}
                 plan={plans[cluster.id]}
@@ -217,6 +352,23 @@
             {/each}
           {/if}
         </div>
+
+        {#if onAnalyzeNextBatch && pendingCount > 0}
+          <div class="sidebar-footer">
+            <button
+              type="button"
+              class="sg-btn sg-btn-batch"
+              on:click={handleAnalyzeBatch}
+              disabled={isAnalyzingBatch || isScanning}
+              title="Отправить следующую порцию в LLM Gatekeeper"
+            >
+              <span class="btn-icon">⚡</span>
+              <span class="btn-text">
+                {isAnalyzingBatch ? "Анализируется..." : `Проанализировать еще 20 (осталось ${pendingCount})`}
+              </span>
+            </button>
+          </div>
+        {/if}
       </aside>
 
       <!-- Right Column: Central Inspection & Refactoring Workspace -->
@@ -546,6 +698,31 @@
     background-color: rgba(248, 81, 73, 0.15);
   }
 
+  .sg-btn-success {
+    background-color: var(--interactive-success, #238636);
+    color: #ffffff;
+    border-color: rgba(35, 134, 54, 0.4);
+  }
+
+  .sg-btn-success:hover:not(:disabled) {
+    background-color: #2ea043;
+  }
+
+  .sg-btn-batch {
+    width: 100%;
+    padding: 7px 10px;
+    font-size: 0.82em;
+    background-color: var(--background-primary);
+    border-color: var(--interactive-accent);
+    color: var(--interactive-accent);
+    font-weight: 600;
+  }
+
+  .sg-btn-batch:hover:not(:disabled) {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+  }
+
   .sg-btn-undo {
     border-color: var(--background-modifier-border);
   }
@@ -598,6 +775,115 @@
     border-radius: 10px;
     background-color: var(--background-modifier-border);
     font-size: 0.85em;
+  }
+
+  .sidebar-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background-color: var(--background-secondary-alt, var(--background-secondary));
+  }
+
+  .sidebar-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .sidebar-search-box .search-icon {
+    position: absolute;
+    left: 8px;
+    font-size: 0.85em;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .sidebar-search-input {
+    width: 100%;
+    padding: 5px 24px 5px 26px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 0.82em;
+    outline: none;
+  }
+
+  .sidebar-search-input:focus {
+    border-color: var(--interactive-accent);
+  }
+
+  .search-clear-btn {
+    position: absolute;
+    right: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.8em;
+    padding: 2px 4px;
+  }
+
+  .search-clear-btn:hover {
+    color: var(--text-normal);
+  }
+
+  .filter-chips {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .chip-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.75em;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.1s ease;
+  }
+
+  .chip-btn:hover {
+    color: var(--text-normal);
+    border-color: var(--text-muted);
+  }
+
+  .chip-btn.active {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+    font-weight: 600;
+  }
+
+  .chip-approved.active {
+    background-color: #238636;
+    border-color: #238636;
+    color: #fff;
+  }
+
+  .chip-rejected.active {
+    background-color: #8b949e;
+    border-color: #8b949e;
+    color: #fff;
+  }
+
+  .chip-pending.active {
+    background-color: #d29922;
+    border-color: #d29922;
+    color: #fff;
+  }
+
+  .sidebar-footer {
+    padding: 8px 10px;
+    border-top: 1px solid var(--background-modifier-border);
+    background-color: var(--background-secondary);
   }
 
   .cluster-list {

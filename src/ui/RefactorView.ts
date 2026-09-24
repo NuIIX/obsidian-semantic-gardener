@@ -82,6 +82,14 @@ export class RefactorView extends ItemView {
         await this.plugin.applyRefactorPlan(cluster, plan);
         this.updateProps();
       },
+      onApplyAllApproved: async () => {
+        await this.plugin.applyAllApprovedPlans();
+        this.updateProps();
+      },
+      onAnalyzeNextBatch: async (size: number = 20) => {
+        await this.plugin.analyzeNextBatch(size);
+        this.updateProps();
+      },
       onRejectCluster: (clusterId: string) => {
         this.plugin.rejectCluster(clusterId);
         this.updateProps();

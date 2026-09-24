@@ -136,7 +136,22 @@ export class SemanticGardenerSettingTab extends PluginSettingTab {
           });
       });
 
-    // 4. Concepts Folder
+    // 4. Auto Gatekeeper Batch Limit
+    new Setting(containerEl)
+      .setName('Лимит первичного анализа AI Gatekeeper')
+      .setDesc(`Количество кандидатов с наибольшим сходством, анализируемых автоматически при сканировании (Текущее: ${this.plugin.settings.autoGatekeeperBatchLimit || 30}). Защищает от выгорания суточной квоты API.`)
+      .addSlider(slider => {
+        slider
+          .setLimits(10, 100, 5)
+          .setValue(this.plugin.settings.autoGatekeeperBatchLimit || 30)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.autoGatekeeperBatchLimit = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    // 5. Concepts Folder
     new Setting(containerEl)
       .setName('Папка для атомарных заметок')
       .setDesc('Директория в хранилище, в которую будут сохраняться создаваемые канонические заметки.')

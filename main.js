@@ -45,7 +45,8 @@ var DEFAULT_SETTINGS = {
   minChunkLength: 40,
   conceptsFolder: "Concepts",
   maxHistoryLength: 20,
-  excludedFolders: ".obsidian, .trash, templates, archive"
+  excludedFolders: ".obsidian, .trash, templates, archive",
+  autoGatekeeperBatchLimit: 30
 };
 
 // src/settings.ts
@@ -126,6 +127,12 @@ var SemanticGardenerSettingTab = class extends import_obsidian.PluginSettingTab 
     new import_obsidian.Setting(containerEl).setName("\u041F\u043E\u0440\u043E\u0433 \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u0430").setDesc(`\u041C\u0438\u043D\u0438\u043C\u0430\u043B\u044C\u043D\u043E\u0435 \u043A\u043E\u0441\u0438\u043D\u0443\u0441\u043D\u043E\u0435 \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u043E \u0432\u0435\u043A\u0442\u043E\u0440\u043E\u0432 \u0434\u043B\u044F \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u0432 \u043A\u043B\u0430\u0441\u0442\u0435\u0440 (\u0422\u0435\u043A\u0443\u0449\u0435\u0435: ${this.plugin.settings.similarityThreshold}). \u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F: 0.80 - 0.85.`).addSlider((slider) => {
       slider.setLimits(0.7, 0.95, 0.01).setValue(this.plugin.settings.similarityThreshold).setDynamicTooltip().onChange(async (value) => {
         this.plugin.settings.similarityThreshold = value;
+        await this.plugin.saveSettings();
+      });
+    });
+    new import_obsidian.Setting(containerEl).setName("\u041B\u0438\u043C\u0438\u0442 \u043F\u0435\u0440\u0432\u0438\u0447\u043D\u043E\u0433\u043E \u0430\u043D\u0430\u043B\u0438\u0437\u0430 AI Gatekeeper").setDesc(`\u041A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432 \u0441 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0438\u043C \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u043E\u043C, \u0430\u043D\u0430\u043B\u0438\u0437\u0438\u0440\u0443\u0435\u043C\u044B\u0445 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u043F\u0440\u0438 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0438 (\u0422\u0435\u043A\u0443\u0449\u0435\u0435: ${this.plugin.settings.autoGatekeeperBatchLimit || 30}). \u0417\u0430\u0449\u0438\u0449\u0430\u0435\u0442 \u043E\u0442 \u0432\u044B\u0433\u043E\u0440\u0430\u043D\u0438\u044F \u0441\u0443\u0442\u043E\u0447\u043D\u043E\u0439 \u043A\u0432\u043E\u0442\u044B API.`).addSlider((slider) => {
+      slider.setLimits(10, 100, 5).setValue(this.plugin.settings.autoGatekeeperBatchLimit || 30).setDynamicTooltip().onChange(async (value) => {
+        this.plugin.settings.autoGatekeeperBatchLimit = value;
         await this.plugin.saveSettings();
       });
     });
@@ -8021,38 +8028,46 @@ function LogPanel($$anchor, $$props) {
 }
 
 // src/ui/components/ReviewModal.svelte
-var root6 = from_html(`<p>\u0412\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430...</p>`);
-var root_16 = from_html(`<p>\u0414\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0438\u043B\u0438 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u0435\u0449\u0435 \u043D\u0435 \u043F\u0440\u043E\u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043E.</p> <button class="sg-btn sg-btn-sm svelte-71f0fw">\u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435</button>`, 1);
-var root_26 = from_html(`<div class="empty-clusters svelte-71f0fw"><!></div>`);
-var root_35 = from_html(`<div class="empty-selection svelte-71f0fw"><div class="empty-icon svelte-71f0fw">\u{1F33F}</div> <h3>\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0434\u043B\u044F \u0440\u0435\u0432\u0438\u0437\u0438\u0438</h3> <p>\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u0438\u0437 \u0441\u043F\u0438\u0441\u043A\u0430 \u0441\u043B\u0435\u0432\u0430, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442,
+var root6 = from_html(`<button class="sg-btn sg-btn-success svelte-71f0fw" title="\u041F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u0441\u0435 \u043E\u0434\u043E\u0431\u0440\u0435\u043D\u043D\u044B\u0435 \u043F\u043B\u0430\u043D\u044B \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433\u0430"><span class="btn-icon svelte-71f0fw">\u{1F680}</span> <span class="btn-text svelte-71f0fw"> </span></button>`);
+var root_16 = from_html(`<button type="button" class="search-clear-btn svelte-71f0fw" title="\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C">\u2715</button>`);
+var root_26 = from_html(`<p>\u0412\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430...</p>`);
+var root_35 = from_html(`<p>\u0414\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0438\u043B\u0438 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u0435\u0449\u0435 \u043D\u0435 \u043F\u0440\u043E\u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043E.</p> <button class="sg-btn sg-btn-sm svelte-71f0fw">\u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435</button>`, 1);
+var root_44 = from_html(`<p>\u041F\u043E \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u043C \u0444\u0438\u043B\u044C\u0442\u0440\u0430\u043C \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E.</p> <button type="button" class="sg-btn sg-btn-sm svelte-71f0fw">\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C \u0444\u0438\u043B\u044C\u0442\u0440\u044B</button>`, 1);
+var root_54 = from_html(`<div class="empty-clusters svelte-71f0fw"><!></div>`);
+var root_63 = from_html(`<div class="sidebar-footer svelte-71f0fw"><button type="button" class="sg-btn sg-btn-batch svelte-71f0fw" title="\u041E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0443\u044E \u043F\u043E\u0440\u0446\u0438\u044E \u0432 LLM Gatekeeper"><span class="btn-icon svelte-71f0fw">\u26A1</span> <span class="btn-text svelte-71f0fw"> </span></button></div>`);
+var root_73 = from_html(`<div class="empty-selection svelte-71f0fw"><div class="empty-icon svelte-71f0fw">\u{1F33F}</div> <h3>\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0434\u043B\u044F \u0440\u0435\u0432\u0438\u0437\u0438\u0438</h3> <p>\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u0438\u0437 \u0441\u043F\u0438\u0441\u043A\u0430 \u0441\u043B\u0435\u0432\u0430, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442,
               \u043F\u043E\u0441\u043B\u043E\u0432\u043D\u044B\u0439 diff \u0438 \u043D\u0430\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0443\u044E \u0437\u0430\u043C\u0435\u043D\u0443.</p></div>`);
-var root_44 = from_html(`<div class="gatekeeper-banner approved svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u2713</span> <div><strong>LLM Gatekeeper:</strong> \u0421\u043C\u044B\u0441\u043B\u043E\u0432\u043E\u0435 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u043E.
+var root_82 = from_html(`<div class="gatekeeper-banner approved svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u2713</span> <div><strong>LLM Gatekeeper:</strong> \u0421\u043C\u044B\u0441\u043B\u043E\u0432\u043E\u0435 \u0434\u0443\u0431\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u043E.
                       \u0421\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u043D \u043F\u043B\u0430\u043D \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u043F\u0440\u0430\u0432\u043E\u043A.</div></div>`);
-var root_54 = from_html(`<button class="sg-btn sg-btn-sm svelte-71f0fw" style="margin-top: 8px;"> </button>`);
-var root_63 = from_html(`<div class="gatekeeper-banner rejected svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u2715</span> <div><strong>LLM Gatekeeper \u043E\u0442\u043A\u043B\u043E\u043D\u0438\u043B \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435:</strong> </div> <!></div>`);
-var root_73 = from_html(`<div><button class="sg-btn sg-btn-primary sg-btn-sm svelte-71f0fw"> </button></div>`);
-var root_82 = from_html(`<div class="gatekeeper-banner pending svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u23F3</span> <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;"><div><strong>\u041F\u043B\u0430\u043D \u0435\u0449\u0435 \u043D\u0435 \u0441\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u043D:</strong> \u0412\u0435\u043A\u0442\u043E\u0440\u043D\u043E\u0435 \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u043E \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u043E, \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0433\u043E\u0442\u043E\u0432 \u043A \u0430\u043D\u0430\u043B\u0438\u0437\u0443.</div> <!></div></div>`);
-var root_9 = from_html(`<button type="button" class="tab-btn compare-notes-tab-btn svelte-71f0fw" title="\u041F\u043E\u0441\u0442\u0440\u043E\u0447\u043D\u043E \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u044C \u0434\u0432\u0435 \u043E\u0441\u043D\u043E\u0432\u043D\u044B\u0435 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430 \u0438 \u043F\u0440\u0438 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u043E\u0441\u0442\u0438 \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442"> </button>`);
-var root_10 = from_html(`<div class="concept-title-row svelte-71f0fw"><label for="concept-title-input" class="concept-label svelte-71f0fw">\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043A\u0430\u043D\u043E\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438:</label> <input id="concept-title-input" type="text" class="concept-title-input svelte-71f0fw" placeholder="\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440: \u0417\u0430\u043A\u043E\u043D \u041B\u0438\u0442\u0442\u043B\u0430"/></div> <div class="tab-bar svelte-71f0fw"><button> </button> <button>\u{1F4DD} \u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0432\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438</button> <!></div>`, 1);
-var root_11 = from_html(`<div class="no-mods svelte-71f0fw"><p>\u0414\u043B\u044F \u0434\u0430\u043D\u043D\u043E\u0433\u043E \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 \u043D\u0435\u0442 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0430\u0432\u043E\u043A (\u0438\u043B\u0438 \u043A\u043B\u0430\u0441\u0442\u0435\u0440
+var root_9 = from_html(`<button class="sg-btn sg-btn-sm svelte-71f0fw" style="margin-top: 8px;"> </button>`);
+var root_10 = from_html(`<div class="gatekeeper-banner rejected svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u2715</span> <div><strong>LLM Gatekeeper \u043E\u0442\u043A\u043B\u043E\u043D\u0438\u043B \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435:</strong> </div> <!></div>`);
+var root_11 = from_html(`<div><button class="sg-btn sg-btn-primary sg-btn-sm svelte-71f0fw"> </button></div>`);
+var root_122 = from_html(`<div class="gatekeeper-banner pending svelte-71f0fw"><span class="banner-icon svelte-71f0fw">\u23F3</span> <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;"><div><strong>\u041F\u043B\u0430\u043D \u0435\u0449\u0435 \u043D\u0435 \u0441\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u043D:</strong> \u0412\u0435\u043A\u0442\u043E\u0440\u043D\u043E\u0435 \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u043E \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u043E, \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0433\u043E\u0442\u043E\u0432 \u043A \u0430\u043D\u0430\u043B\u0438\u0437\u0443.</div> <!></div></div>`);
+var root_132 = from_html(`<button type="button" class="tab-btn compare-notes-tab-btn svelte-71f0fw" title="\u041F\u043E\u0441\u0442\u0440\u043E\u0447\u043D\u043E \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u044C \u0434\u0432\u0435 \u043E\u0441\u043D\u043E\u0432\u043D\u044B\u0435 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430 \u0438 \u043F\u0440\u0438 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u043E\u0441\u0442\u0438 \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442"> </button>`);
+var root_142 = from_html(`<div class="concept-title-row svelte-71f0fw"><label for="concept-title-input" class="concept-label svelte-71f0fw">\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043A\u0430\u043D\u043E\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438:</label> <input id="concept-title-input" type="text" class="concept-title-input svelte-71f0fw" placeholder="\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440: \u0417\u0430\u043A\u043E\u043D \u041B\u0438\u0442\u0442\u043B\u0430"/></div> <div class="tab-bar svelte-71f0fw"><button> </button> <button>\u{1F4DD} \u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0432\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438</button> <!></div>`, 1);
+var root_152 = from_html(`<div class="no-mods svelte-71f0fw"><p>\u0414\u043B\u044F \u0434\u0430\u043D\u043D\u043E\u0433\u043E \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 \u043D\u0435\u0442 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0430\u0432\u043E\u043A (\u0438\u043B\u0438 \u043A\u043B\u0430\u0441\u0442\u0435\u0440
                           \u0431\u044B\u043B \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D Gatekeeper).</p></div>`);
-var root_122 = from_html(`<div class="modifications-list svelte-71f0fw"><!></div>`);
-var root_132 = from_html(`<div class="note-preview-pane svelte-71f0fw"><label for="atomic-note-textarea" class="concept-label svelte-71f0fw">\u0421\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435 \u043D\u043E\u0432\u043E\u0439 \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 (Markdown):</label> <textarea id="atomic-note-textarea" class="atomic-note-editor svelte-71f0fw" rows="12" placeholder="# \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435
+var root_162 = from_html(`<div class="modifications-list svelte-71f0fw"><!></div>`);
+var root_17 = from_html(`<div class="note-preview-pane svelte-71f0fw"><label for="atomic-note-textarea" class="concept-label svelte-71f0fw">\u0421\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435 \u043D\u043E\u0432\u043E\u0439 \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 (Markdown):</label> <textarea id="atomic-note-textarea" class="atomic-note-editor svelte-71f0fw" rows="12" placeholder="# \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435
 
 \u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0432\u043E\u0439 \u0430\u0442\u043E\u043C\u0430\u0440\u043D\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438..."></textarea></div>`);
-var root_142 = from_html(`<div class="tab-content svelte-71f0fw"><!></div>`);
-var root_152 = from_html(`<div class="no-mods svelte-71f0fw" style="padding: 32px 16px; text-align: center;"><p>\u041D\u0430\u0436\u043C\u0438\u0442\u0435 <strong>\xAB\u26A1 \u0421\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043F\u043B\u0430\u043D \u0447\u0435\u0440\u0435\u0437 Gemini\xBB</strong> \u0432\u044B\u0448\u0435, \u0447\u0442\u043E\u0431\u044B \u0441\u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430 \u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0432\u0441\u0442\u0430\u0432\u043A\u0438.</p></div>`);
-var root_162 = from_html(`<div class="concept-workspace svelte-71f0fw"><div class="narrow-nav-row svelte-71f0fw"><button class="sg-btn sg-btn-sm svelte-71f0fw" title="\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u043A \u0441\u043F\u0438\u0441\u043A\u0443 \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432"> </button> <span class="narrow-concept-label svelte-71f0fw"> </span></div> <div class="concept-header-box svelte-71f0fw"><!> <!></div> <!> <div class="concept-footer-actions svelte-71f0fw"><button class="sg-btn sg-btn-danger svelte-71f0fw" title="\u0418\u0441\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0438\u0437 \u043E\u0447\u0435\u0440\u0435\u0434\u0438">\u041E\u0442\u043A\u043B\u043E\u043D\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442</button> <div class="spacer svelte-71f0fw"></div> <button class="sg-btn sg-btn-primary sg-btn-large svelte-71f0fw" title="\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0437\u0430\u043C\u0435\u0442\u043A\u0443 \u0438 \u043F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0437\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 \u0441 \u0437\u0430\u043F\u0438\u0441\u044C\u044E \u0432 \u0436\u0443\u0440\u043D\u0430\u043B \u0438\u0441\u0442\u043E\u0440\u0438\u0438">\u{1F680} \u041F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433</button></div></div>`);
-var root_17 = from_html(`<div class="semantic-gardener-container svelte-71f0fw"><div class="semantic-gardener-root svelte-71f0fw"><header class="sg-header svelte-71f0fw"><div class="sg-header-left svelte-71f0fw"><span class="sg-logo svelte-71f0fw">\u{1F331}</span> <h2 class="sg-title svelte-71f0fw">Semantic Gardener</h2> <span class="sg-badge svelte-71f0fw"> </span></div> <div class="sg-header-actions svelte-71f0fw"><button class="sg-btn svelte-71f0fw" title="\u041F\u043E\u0438\u0441\u043A \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0434\u043B\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438"><span class="btn-icon svelte-71f0fw">\u{1F4C4}</span> <span class="btn-text svelte-71f0fw">\u0410\u043A\u0442\u0438\u0432\u043D\u0430\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0430</span></button> <button class="sg-btn sg-btn-primary svelte-71f0fw" title="\u041F\u043E\u043B\u043D\u043E\u0435 \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430"><span class="btn-icon svelte-71f0fw">\u{1F50D}</span> <span class="btn-text svelte-71f0fw">\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C Vault</span></button> <button class="sg-btn sg-btn-undo svelte-71f0fw" title="\u041E\u0442\u043A\u0430\u0442\u0438\u0442\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433 \u0432 1 \u043A\u043B\u0438\u043A"><span class="btn-icon svelte-71f0fw">\u21A9</span> <span class="btn-text svelte-71f0fw"> </span></button></div></header> <!> <div><aside class="sg-sidebar svelte-71f0fw"><div class="sidebar-header svelte-71f0fw"><span>\u041E\u0447\u0435\u0440\u0435\u0434\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432</span> <span class="count-pill svelte-71f0fw"> </span></div> <div class="cluster-list svelte-71f0fw"><!></div></aside> <main class="sg-main-content svelte-71f0fw"><!></main></div></div> <!></div>`);
+var root_18 = from_html(`<div class="tab-content svelte-71f0fw"><!></div>`);
+var root_19 = from_html(`<div class="no-mods svelte-71f0fw" style="padding: 32px 16px; text-align: center;"><p>\u041D\u0430\u0436\u043C\u0438\u0442\u0435 <strong>\xAB\u26A1 \u0421\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043F\u043B\u0430\u043D \u0447\u0435\u0440\u0435\u0437 Gemini\xBB</strong> \u0432\u044B\u0448\u0435, \u0447\u0442\u043E\u0431\u044B \u0441\u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430 \u0438 \u043C\u0438\u043A\u0440\u043E\u0445\u0438\u0440\u0443\u0440\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0432\u0441\u0442\u0430\u0432\u043A\u0438.</p></div>`);
+var root_20 = from_html(`<div class="concept-workspace svelte-71f0fw"><div class="narrow-nav-row svelte-71f0fw"><button class="sg-btn sg-btn-sm svelte-71f0fw" title="\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u043A \u0441\u043F\u0438\u0441\u043A\u0443 \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432"> </button> <span class="narrow-concept-label svelte-71f0fw"> </span></div> <div class="concept-header-box svelte-71f0fw"><!> <!></div> <!> <div class="concept-footer-actions svelte-71f0fw"><button class="sg-btn sg-btn-danger svelte-71f0fw" title="\u0418\u0441\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442 \u0438\u0437 \u043E\u0447\u0435\u0440\u0435\u0434\u0438">\u041E\u0442\u043A\u043B\u043E\u043D\u0438\u0442\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442</button> <div class="spacer svelte-71f0fw"></div> <button class="sg-btn sg-btn-primary sg-btn-large svelte-71f0fw" title="\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0437\u0430\u043C\u0435\u0442\u043A\u0443 \u0438 \u043F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0437\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 \u0441 \u0437\u0430\u043F\u0438\u0441\u044C\u044E \u0432 \u0436\u0443\u0440\u043D\u0430\u043B \u0438\u0441\u0442\u043E\u0440\u0438\u0438">\u{1F680} \u041F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433</button></div></div>`);
+var root_21 = from_html(`<div class="semantic-gardener-container svelte-71f0fw"><div class="semantic-gardener-root svelte-71f0fw"><header class="sg-header svelte-71f0fw"><div class="sg-header-left svelte-71f0fw"><span class="sg-logo svelte-71f0fw">\u{1F331}</span> <h2 class="sg-title svelte-71f0fw">Semantic Gardener</h2> <span class="sg-badge svelte-71f0fw"> </span></div> <div class="sg-header-actions svelte-71f0fw"><button class="sg-btn svelte-71f0fw" title="\u041F\u043E\u0438\u0441\u043A \u0434\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0434\u043B\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438"><span class="btn-icon svelte-71f0fw">\u{1F4C4}</span> <span class="btn-text svelte-71f0fw">\u0410\u043A\u0442\u0438\u0432\u043D\u0430\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0430</span></button> <button class="sg-btn sg-btn-primary svelte-71f0fw" title="\u041F\u043E\u043B\u043D\u043E\u0435 \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0441\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430"><span class="btn-icon svelte-71f0fw">\u{1F50D}</span> <span class="btn-text svelte-71f0fw">\u0421\u043A\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C Vault</span></button> <!> <button class="sg-btn sg-btn-undo svelte-71f0fw" title="\u041E\u0442\u043A\u0430\u0442\u0438\u0442\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433 \u0432 1 \u043A\u043B\u0438\u043A"><span class="btn-icon svelte-71f0fw">\u21A9</span> <span class="btn-text svelte-71f0fw"> </span></button></div></header> <!> <div><aside class="sg-sidebar svelte-71f0fw"><div class="sidebar-header svelte-71f0fw"><span>\u041E\u0447\u0435\u0440\u0435\u0434\u044C \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432</span> <span class="count-pill svelte-71f0fw"> </span></div> <div class="sidebar-controls svelte-71f0fw"><div class="sidebar-search-box svelte-71f0fw"><span class="search-icon svelte-71f0fw">\u{1F50D}</span> <input type="text" class="sidebar-search-input svelte-71f0fw" placeholder="\u041F\u043E\u0438\u0441\u043A \u043F\u043E \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430\u043C \u0438 \u0444\u0430\u0439\u043B\u0430\u043C..."/> <!></div> <div class="filter-chips svelte-71f0fw"><button type="button"> </button> <button type="button" title="\u0414\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u044B, \u0442\u0440\u0435\u0431\u0443\u044E\u0449\u0438\u0435 \u0441\u043B\u0438\u044F\u043D\u0438\u044F"> </button> <button type="button" title="\u0420\u0430\u0437\u043D\u044B\u0435 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u044B (\u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D\u043E \u0418\u0418)"> </button> <button type="button" title="\u041E\u0436\u0438\u0434\u0430\u044E\u0442 \u0430\u043D\u0430\u043B\u0438\u0437\u0430 Gatekeeper"> </button></div></div> <div class="cluster-list svelte-71f0fw"><!></div> <!></aside> <main class="sg-main-content svelte-71f0fw"><!></main></div></div> <!></div>`);
 var $$css6 = {
   hash: "svelte-71f0fw",
-  code: ".semantic-gardener-container.svelte-71f0fw {container-type:inline-size;container-name:gardener-root;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}.semantic-gardener-root.svelte-71f0fw {display:flex;flex-direction:column;height:100%;width:100%;background-color:var(--background-primary);color:var(--text-normal);font-family:var(--font-text);overflow:hidden;}\n\n  /* Header */.sg-header.svelte-71f0fw {display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--background-modifier-border);background-color:var(--background-secondary-alt);flex-shrink:0;gap:10px;flex-wrap:wrap;}.sg-header-left.svelte-71f0fw {display:flex;align-items:center;gap:8px;flex-shrink:0;}.sg-logo.svelte-71f0fw {font-size:1.4em;}.sg-title.svelte-71f0fw {margin:0;font-size:1.15em;font-weight:700;}.sg-badge.svelte-71f0fw {font-size:0.75em;padding:2px 8px;border-radius:12px;background-color:var(--background-modifier-border);color:var(--text-muted);}.sg-header-actions.svelte-71f0fw {display:flex;align-items:center;gap:6px;flex-wrap:wrap;}\n\n  /* Dynamic Buttons */.sg-btn.svelte-71f0fw {display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 12px;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-primary);color:var(--text-normal);cursor:pointer;font-size:0.85em;font-weight:500;transition:all 0.15s ease;white-space:nowrap;}.sg-btn.svelte-71f0fw:hover:not(:disabled) {background-color:var(--background-modifier-hover);border-color:var(--interactive-accent);}.sg-btn.svelte-71f0fw:disabled {opacity:0.45;cursor:not-allowed;}.sg-btn-primary.svelte-71f0fw {background-color:var(--interactive-accent);color:var(--text-on-accent);border-color:var(--interactive-accent);}.sg-btn-primary.svelte-71f0fw:hover:not(:disabled) {background-color:var(--interactive-accent-hover);}.sg-btn-danger.svelte-71f0fw {color:var(--text-error, #f85149);border-color:rgba(248, 81, 73, 0.4);}.sg-btn-danger.svelte-71f0fw:hover {background-color:rgba(248, 81, 73, 0.15);}.sg-btn-undo.svelte-71f0fw {border-color:var(--background-modifier-border);}.sg-btn-large.svelte-71f0fw {padding:8px 18px;font-size:0.95em;font-weight:600;}.sg-btn-sm.svelte-71f0fw {padding:4px 8px;font-size:0.8em;}.btn-icon.svelte-71f0fw {font-size:0.95em;}\n\n  /* Body Layout */.sg-body.svelte-71f0fw {display:flex;flex:1;overflow:hidden;}\n\n  /* Left Sidebar */.sg-sidebar.svelte-71f0fw {width:320px;border-right:1px solid var(--background-modifier-border);display:flex;flex-direction:column;background-color:var(--background-secondary);flex-shrink:0;}.sidebar-header.svelte-71f0fw {display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:0.85em;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--background-modifier-border);}.count-pill.svelte-71f0fw {padding:1px 6px;border-radius:10px;background-color:var(--background-modifier-border);font-size:0.85em;}.cluster-list.svelte-71f0fw {flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px;}.empty-clusters.svelte-71f0fw {padding:30px 16px;text-align:center;color:var(--text-muted);font-size:0.88em;}\n\n  /* Main Workspace */.sg-main-content.svelte-71f0fw {flex:1;overflow-y:auto;display:flex;flex-direction:column;background-color:var(--background-primary);}.empty-selection.svelte-71f0fw {display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:var(--text-muted);}.empty-icon.svelte-71f0fw {font-size:3em;margin-bottom:16px;opacity:0.7;}.concept-workspace.svelte-71f0fw {display:flex;flex-direction:column;min-height:100%;padding:16px 20px;gap:16px;}.narrow-nav-row.svelte-71f0fw {display:none;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--background-modifier-border);}.narrow-concept-label.svelte-71f0fw {font-weight:600;font-size:0.9em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-accent);}.concept-header-box.svelte-71f0fw {display:flex;flex-direction:column;gap:12px;}.gatekeeper-banner.svelte-71f0fw {display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:6px;font-size:0.88em;line-height:1.4;}.gatekeeper-banner.approved.svelte-71f0fw {background-color:rgba(46, 160, 67, 0.15);border:1px solid rgba(46, 160, 67, 0.35);color:var(--text-success, #3fb950);}.gatekeeper-banner.rejected.svelte-71f0fw {background-color:rgba(248, 81, 73, 0.15);border:1px solid rgba(248, 81, 73, 0.35);color:var(--text-error, #f85149);}.gatekeeper-banner.pending.svelte-71f0fw {background-color:rgba(210, 153, 34, 0.15);border:1px solid rgba(210, 153, 34, 0.35);color:var(--text-warning, #d29922);}.banner-icon.svelte-71f0fw {font-weight:700;font-size:1.2em;flex-shrink:0;}.concept-title-row.svelte-71f0fw {display:flex;flex-direction:column;gap:6px;}.concept-label.svelte-71f0fw {font-size:0.85em;font-weight:600;color:var(--text-muted);}.concept-title-input.svelte-71f0fw {width:100%;padding:8px 12px;font-size:1.05em;font-weight:600;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-secondary);color:var(--text-normal);}.concept-title-input.svelte-71f0fw:focus {border-color:var(--interactive-accent);outline:none;}.tab-bar.svelte-71f0fw {display:flex;gap:8px;border-bottom:1px solid var(--background-modifier-border);padding-bottom:4px;flex-wrap:wrap;}.tab-btn.svelte-71f0fw {background:transparent;border:none;color:var(--text-muted);font-size:0.88em;padding:6px 12px;border-radius:4px;cursor:pointer;transition:color 0.15s ease;}.tab-btn.svelte-71f0fw:hover {color:var(--text-normal);}.tab-btn.active.svelte-71f0fw {color:var(--interactive-accent);font-weight:600;border-bottom:2px solid var(--interactive-accent);border-radius:0;}.compare-notes-tab-btn.svelte-71f0fw {margin-left:auto;background-color:var(--background-modifier-form-field);border:1px solid var(--background-modifier-border);color:var(--text-accent);font-weight:500;}.compare-notes-tab-btn.svelte-71f0fw:hover {background-color:var(--background-modifier-hover);color:var(--interactive-accent);}.tab-content.svelte-71f0fw {flex:1;}.modifications-list.svelte-71f0fw {display:flex;flex-direction:column;gap:12px;}.no-mods.svelte-71f0fw {padding:20px;color:var(--text-muted);font-style:italic;}.note-preview-pane.svelte-71f0fw {display:flex;flex-direction:column;gap:8px;}.atomic-note-editor.svelte-71f0fw {width:100%;font-family:var(--font-monospace);font-size:0.9em;line-height:1.5;padding:12px;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-secondary);color:var(--text-normal);resize:vertical;}.concept-footer-actions.svelte-71f0fw {display:flex;align-items:center;padding-top:14px;border-top:1px solid var(--background-modifier-border);margin-top:auto;flex-wrap:wrap;gap:10px;}.spacer.svelte-71f0fw {flex:1;}\n\n  /* Container Queries for Adaptive Responsive Layout */\n  @container gardener-root (max-width: 680px) {.sg-header.svelte-71f0fw {flex-direction:column;align-items:stretch;gap:8px;padding:8px 12px;}.sg-header-actions.svelte-71f0fw {display:flex;width:100%;gap:6px;}.sg-header-actions.svelte-71f0fw .sg-btn:where(.svelte-71f0fw) {flex:1 1 auto;padding:6px 8px;font-size:0.82em;}\n\n    /* Stacked View: only show active view mode in narrow mode */.sg-body.view-mode-list.svelte-71f0fw .sg-main-content:where(.svelte-71f0fw) {display:none !important;}.sg-body.view-mode-detail.svelte-71f0fw .sg-sidebar:where(.svelte-71f0fw) {display:none !important;}.sg-body.view-mode-detail.svelte-71f0fw .sg-main-content:where(.svelte-71f0fw) {width:100% !important;}.sg-body.view-mode-list.svelte-71f0fw .sg-sidebar:where(.svelte-71f0fw) {width:100% !important;border-right:none;}.narrow-nav-row.svelte-71f0fw {display:flex !important;}\n  }\n\n  @container gardener-root (max-width: 440px) {.sg-header-actions.svelte-71f0fw .btn-text:where(.svelte-71f0fw) {font-size:0.82em;}.concept-footer-actions.svelte-71f0fw {flex-direction:column-reverse;align-items:stretch;gap:8px;}.concept-footer-actions.svelte-71f0fw .sg-btn:where(.svelte-71f0fw) {width:100%;text-align:center;justify-content:center;}.concept-footer-actions.svelte-71f0fw .spacer:where(.svelte-71f0fw) {display:none;}\n  }"
+  code: ".semantic-gardener-container.svelte-71f0fw {container-type:inline-size;container-name:gardener-root;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}.semantic-gardener-root.svelte-71f0fw {display:flex;flex-direction:column;height:100%;width:100%;background-color:var(--background-primary);color:var(--text-normal);font-family:var(--font-text);overflow:hidden;}\n\n  /* Header */.sg-header.svelte-71f0fw {display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--background-modifier-border);background-color:var(--background-secondary-alt);flex-shrink:0;gap:10px;flex-wrap:wrap;}.sg-header-left.svelte-71f0fw {display:flex;align-items:center;gap:8px;flex-shrink:0;}.sg-logo.svelte-71f0fw {font-size:1.4em;}.sg-title.svelte-71f0fw {margin:0;font-size:1.15em;font-weight:700;}.sg-badge.svelte-71f0fw {font-size:0.75em;padding:2px 8px;border-radius:12px;background-color:var(--background-modifier-border);color:var(--text-muted);}.sg-header-actions.svelte-71f0fw {display:flex;align-items:center;gap:6px;flex-wrap:wrap;}\n\n  /* Dynamic Buttons */.sg-btn.svelte-71f0fw {display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 12px;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-primary);color:var(--text-normal);cursor:pointer;font-size:0.85em;font-weight:500;transition:all 0.15s ease;white-space:nowrap;}.sg-btn.svelte-71f0fw:hover:not(:disabled) {background-color:var(--background-modifier-hover);border-color:var(--interactive-accent);}.sg-btn.svelte-71f0fw:disabled {opacity:0.45;cursor:not-allowed;}.sg-btn-primary.svelte-71f0fw {background-color:var(--interactive-accent);color:var(--text-on-accent);border-color:var(--interactive-accent);}.sg-btn-primary.svelte-71f0fw:hover:not(:disabled) {background-color:var(--interactive-accent-hover);}.sg-btn-danger.svelte-71f0fw {color:var(--text-error, #f85149);border-color:rgba(248, 81, 73, 0.4);}.sg-btn-danger.svelte-71f0fw:hover {background-color:rgba(248, 81, 73, 0.15);}.sg-btn-success.svelte-71f0fw {background-color:var(--interactive-success, #238636);color:#ffffff;border-color:rgba(35, 134, 54, 0.4);}.sg-btn-success.svelte-71f0fw:hover:not(:disabled) {background-color:#2ea043;}.sg-btn-batch.svelte-71f0fw {width:100%;padding:7px 10px;font-size:0.82em;background-color:var(--background-primary);border-color:var(--interactive-accent);color:var(--interactive-accent);font-weight:600;}.sg-btn-batch.svelte-71f0fw:hover:not(:disabled) {background-color:var(--interactive-accent);color:var(--text-on-accent);}.sg-btn-undo.svelte-71f0fw {border-color:var(--background-modifier-border);}.sg-btn-large.svelte-71f0fw {padding:8px 18px;font-size:0.95em;font-weight:600;}.sg-btn-sm.svelte-71f0fw {padding:4px 8px;font-size:0.8em;}.btn-icon.svelte-71f0fw {font-size:0.95em;}\n\n  /* Body Layout */.sg-body.svelte-71f0fw {display:flex;flex:1;overflow:hidden;}\n\n  /* Left Sidebar */.sg-sidebar.svelte-71f0fw {width:320px;border-right:1px solid var(--background-modifier-border);display:flex;flex-direction:column;background-color:var(--background-secondary);flex-shrink:0;}.sidebar-header.svelte-71f0fw {display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:0.85em;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--background-modifier-border);}.count-pill.svelte-71f0fw {padding:1px 6px;border-radius:10px;background-color:var(--background-modifier-border);font-size:0.85em;}.sidebar-controls.svelte-71f0fw {display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-bottom:1px solid var(--background-modifier-border);background-color:var(--background-secondary-alt, var(--background-secondary));}.sidebar-search-box.svelte-71f0fw {position:relative;display:flex;align-items:center;width:100%;}.sidebar-search-box.svelte-71f0fw .search-icon:where(.svelte-71f0fw) {position:absolute;left:8px;font-size:0.85em;color:var(--text-muted);pointer-events:none;}.sidebar-search-input.svelte-71f0fw {width:100%;padding:5px 24px 5px 26px;border-radius:4px;border:1px solid var(--background-modifier-border);background-color:var(--background-primary);color:var(--text-normal);font-size:0.82em;outline:none;}.sidebar-search-input.svelte-71f0fw:focus {border-color:var(--interactive-accent);}.search-clear-btn.svelte-71f0fw {position:absolute;right:6px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-size:0.8em;padding:2px 4px;}.search-clear-btn.svelte-71f0fw:hover {color:var(--text-normal);}.filter-chips.svelte-71f0fw {display:flex;gap:4px;flex-wrap:wrap;}.chip-btn.svelte-71f0fw {display:inline-flex;align-items:center;padding:2px 7px;border-radius:10px;font-size:0.75em;border:1px solid var(--background-modifier-border);background-color:var(--background-primary);color:var(--text-muted);cursor:pointer;transition:all 0.1s ease;}.chip-btn.svelte-71f0fw:hover {color:var(--text-normal);border-color:var(--text-muted);}.chip-btn.active.svelte-71f0fw {background-color:var(--interactive-accent);color:var(--text-on-accent);border-color:var(--interactive-accent);font-weight:600;}.chip-approved.active.svelte-71f0fw {background-color:#238636;border-color:#238636;color:#fff;}.chip-rejected.active.svelte-71f0fw {background-color:#8b949e;border-color:#8b949e;color:#fff;}.chip-pending.active.svelte-71f0fw {background-color:#d29922;border-color:#d29922;color:#fff;}.sidebar-footer.svelte-71f0fw {padding:8px 10px;border-top:1px solid var(--background-modifier-border);background-color:var(--background-secondary);}.cluster-list.svelte-71f0fw {flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px;}.empty-clusters.svelte-71f0fw {padding:30px 16px;text-align:center;color:var(--text-muted);font-size:0.88em;}\n\n  /* Main Workspace */.sg-main-content.svelte-71f0fw {flex:1;overflow-y:auto;display:flex;flex-direction:column;background-color:var(--background-primary);}.empty-selection.svelte-71f0fw {display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:var(--text-muted);}.empty-icon.svelte-71f0fw {font-size:3em;margin-bottom:16px;opacity:0.7;}.concept-workspace.svelte-71f0fw {display:flex;flex-direction:column;min-height:100%;padding:16px 20px;gap:16px;}.narrow-nav-row.svelte-71f0fw {display:none;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--background-modifier-border);}.narrow-concept-label.svelte-71f0fw {font-weight:600;font-size:0.9em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-accent);}.concept-header-box.svelte-71f0fw {display:flex;flex-direction:column;gap:12px;}.gatekeeper-banner.svelte-71f0fw {display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:6px;font-size:0.88em;line-height:1.4;}.gatekeeper-banner.approved.svelte-71f0fw {background-color:rgba(46, 160, 67, 0.15);border:1px solid rgba(46, 160, 67, 0.35);color:var(--text-success, #3fb950);}.gatekeeper-banner.rejected.svelte-71f0fw {background-color:rgba(248, 81, 73, 0.15);border:1px solid rgba(248, 81, 73, 0.35);color:var(--text-error, #f85149);}.gatekeeper-banner.pending.svelte-71f0fw {background-color:rgba(210, 153, 34, 0.15);border:1px solid rgba(210, 153, 34, 0.35);color:var(--text-warning, #d29922);}.banner-icon.svelte-71f0fw {font-weight:700;font-size:1.2em;flex-shrink:0;}.concept-title-row.svelte-71f0fw {display:flex;flex-direction:column;gap:6px;}.concept-label.svelte-71f0fw {font-size:0.85em;font-weight:600;color:var(--text-muted);}.concept-title-input.svelte-71f0fw {width:100%;padding:8px 12px;font-size:1.05em;font-weight:600;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-secondary);color:var(--text-normal);}.concept-title-input.svelte-71f0fw:focus {border-color:var(--interactive-accent);outline:none;}.tab-bar.svelte-71f0fw {display:flex;gap:8px;border-bottom:1px solid var(--background-modifier-border);padding-bottom:4px;flex-wrap:wrap;}.tab-btn.svelte-71f0fw {background:transparent;border:none;color:var(--text-muted);font-size:0.88em;padding:6px 12px;border-radius:4px;cursor:pointer;transition:color 0.15s ease;}.tab-btn.svelte-71f0fw:hover {color:var(--text-normal);}.tab-btn.active.svelte-71f0fw {color:var(--interactive-accent);font-weight:600;border-bottom:2px solid var(--interactive-accent);border-radius:0;}.compare-notes-tab-btn.svelte-71f0fw {margin-left:auto;background-color:var(--background-modifier-form-field);border:1px solid var(--background-modifier-border);color:var(--text-accent);font-weight:500;}.compare-notes-tab-btn.svelte-71f0fw:hover {background-color:var(--background-modifier-hover);color:var(--interactive-accent);}.tab-content.svelte-71f0fw {flex:1;}.modifications-list.svelte-71f0fw {display:flex;flex-direction:column;gap:12px;}.no-mods.svelte-71f0fw {padding:20px;color:var(--text-muted);font-style:italic;}.note-preview-pane.svelte-71f0fw {display:flex;flex-direction:column;gap:8px;}.atomic-note-editor.svelte-71f0fw {width:100%;font-family:var(--font-monospace);font-size:0.9em;line-height:1.5;padding:12px;border-radius:6px;border:1px solid var(--background-modifier-border);background-color:var(--background-secondary);color:var(--text-normal);resize:vertical;}.concept-footer-actions.svelte-71f0fw {display:flex;align-items:center;padding-top:14px;border-top:1px solid var(--background-modifier-border);margin-top:auto;flex-wrap:wrap;gap:10px;}.spacer.svelte-71f0fw {flex:1;}\n\n  /* Container Queries for Adaptive Responsive Layout */\n  @container gardener-root (max-width: 680px) {.sg-header.svelte-71f0fw {flex-direction:column;align-items:stretch;gap:8px;padding:8px 12px;}.sg-header-actions.svelte-71f0fw {display:flex;width:100%;gap:6px;}.sg-header-actions.svelte-71f0fw .sg-btn:where(.svelte-71f0fw) {flex:1 1 auto;padding:6px 8px;font-size:0.82em;}\n\n    /* Stacked View: only show active view mode in narrow mode */.sg-body.view-mode-list.svelte-71f0fw .sg-main-content:where(.svelte-71f0fw) {display:none !important;}.sg-body.view-mode-detail.svelte-71f0fw .sg-sidebar:where(.svelte-71f0fw) {display:none !important;}.sg-body.view-mode-detail.svelte-71f0fw .sg-main-content:where(.svelte-71f0fw) {width:100% !important;}.sg-body.view-mode-list.svelte-71f0fw .sg-sidebar:where(.svelte-71f0fw) {width:100% !important;border-right:none;}.narrow-nav-row.svelte-71f0fw {display:flex !important;}\n  }\n\n  @container gardener-root (max-width: 440px) {.sg-header-actions.svelte-71f0fw .btn-text:where(.svelte-71f0fw) {font-size:0.82em;}.concept-footer-actions.svelte-71f0fw {flex-direction:column-reverse;align-items:stretch;gap:8px;}.concept-footer-actions.svelte-71f0fw .sg-btn:where(.svelte-71f0fw) {width:100%;text-align:center;justify-content:center;}.concept-footer-actions.svelte-71f0fw .spacer:where(.svelte-71f0fw) {display:none;}\n  }"
 };
 function ReviewModal($$anchor, $$props) {
   push($$props, false);
   append_styles($$anchor, $$css6);
   const $store = () => store_get(store(), "$store", $$stores);
   const [$$stores, $$cleanup] = setup_stores();
+  const approvedCount = mutable_source();
+  const rejectedCount = mutable_source();
+  const pendingCount = mutable_source();
+  const filteredClusters = mutable_source();
   const clusterDistinctFiles = mutable_source();
   const selectedCluster = mutable_source();
   const selectedPlan = mutable_source();
@@ -8069,6 +8084,8 @@ function ReviewModal($$anchor, $$props) {
   let onOpenFile = prop($$props, "onOpenFile", 8, void 0);
   let onReadNoteContent = prop($$props, "onReadNoteContent", 8, void 0);
   let onDeleteNote = prop($$props, "onDeleteNote", 8, void 0);
+  let onAnalyzeNextBatch = prop($$props, "onAnalyzeNextBatch", 8, void 0);
+  let onApplyAllApproved = prop($$props, "onApplyAllApproved", 8, void 0);
   let onApplyPlan = prop($$props, "onApplyPlan", 8);
   let onRejectCluster = prop($$props, "onRejectCluster", 8);
   let onUndoLast = prop($$props, "onUndoLast", 8);
@@ -8077,6 +8094,10 @@ function ReviewModal($$anchor, $$props) {
   let historyCount = mutable_source(0);
   let activeViewMode = mutable_source("list");
   let isAnalyzingSingle = mutable_source(false);
+  let isAnalyzingBatch = mutable_source(false);
+  let isApplyingBatch = mutable_source(false);
+  let searchQuery = mutable_source("");
+  let activeFilterTab = mutable_source("all");
   let diffModalOpen = mutable_source(false);
   let diffFilePathA = mutable_source("");
   let diffFilePathB = mutable_source("");
@@ -8140,6 +8161,32 @@ function ReviewModal($$anchor, $$props) {
     await onUndoLast()();
     updateHistoryCount();
   }
+  async function handleAnalyzeBatch() {
+    if (!onAnalyzeNextBatch()) return;
+    set(isAnalyzingBatch, true);
+    try {
+      await onAnalyzeNextBatch()(20);
+      if (plugin()?.refactorPlans) {
+        plans({ ...plugin().refactorPlans });
+      }
+    } finally {
+      set(isAnalyzingBatch, false);
+    }
+  }
+  async function handleApplyAllApproved() {
+    if (!onApplyAllApproved()) return;
+    set(isApplyingBatch, true);
+    try {
+      await onApplyAllApproved()();
+      if (plugin()?.candidateClusters) {
+        clusters([...plugin().candidateClusters]);
+        plans({ ...plugin().refactorPlans });
+      }
+      updateHistoryCount();
+    } finally {
+      set(isApplyingBatch, false);
+    }
+  }
   legacy_pre_effect(() => (deep_read_state(store()), $store()), () => {
     if (store() && $store()) {
       if ($store().clusters) clusters($store().clusters);
@@ -8147,14 +8194,45 @@ function ReviewModal($$anchor, $$props) {
       if ($store().isScanning !== void 0) isScanning($store().isScanning);
     }
   });
-  legacy_pre_effect(() => (get(selectedClusterId), deep_read_state(clusters())), () => {
-    if (!get(selectedClusterId) && clusters().length > 0) {
-      set(selectedClusterId, clusters()[0].id);
+  legacy_pre_effect(() => (deep_read_state(clusters()), deep_read_state(plans())), () => {
+    set(approvedCount, clusters().filter((c) => plans()[c.id]?.isDuplicate).length);
+  });
+  legacy_pre_effect(() => (deep_read_state(clusters()), deep_read_state(plans())), () => {
+    set(rejectedCount, clusters().filter((c) => plans()[c.id] && !plans()[c.id].isDuplicate).length);
+  });
+  legacy_pre_effect(() => (deep_read_state(clusters()), deep_read_state(plans())), () => {
+    set(pendingCount, clusters().filter((c) => !plans()[c.id]).length);
+  });
+  legacy_pre_effect(
+    () => (deep_read_state(clusters()), deep_read_state(plans()), get(activeFilterTab), get(searchQuery)),
+    () => {
+      set(filteredClusters, clusters().filter((cluster) => {
+        const plan = plans()[cluster.id];
+        if (get(activeFilterTab) === "approved" && !plan?.isDuplicate) return false;
+        if (get(activeFilterTab) === "rejected" && (!plan || plan.isDuplicate)) return false;
+        if (get(activeFilterTab) === "pending" && plan !== void 0) return false;
+        if (get(searchQuery).trim().length > 0) {
+          const q = get(searchQuery).toLowerCase();
+          const matchesTitle = plan?.conceptTitle?.toLowerCase().includes(q) || false;
+          const matchesFile = cluster.chunks.some((c) => c.filePath.toLowerCase().includes(q));
+          const matchesBreadcrumbs = cluster.chunks.some((c) => c.breadcrumbs.toLowerCase().includes(q));
+          return matchesTitle || matchesFile || matchesBreadcrumbs;
+        }
+        return true;
+      }));
+    }
+  );
+  legacy_pre_effect(() => (get(selectedClusterId), get(filteredClusters)), () => {
+    if (!get(selectedClusterId) && get(filteredClusters).length > 0) {
+      set(selectedClusterId, get(filteredClusters)[0].id);
     }
   });
-  legacy_pre_effect(() => (deep_read_state(clusters()), get(selectedClusterId)), () => {
-    set(selectedCluster, clusters().find((c) => c.id === get(selectedClusterId)) || (clusters().length > 0 ? clusters()[0] : null));
-  });
+  legacy_pre_effect(
+    () => (get(filteredClusters), get(selectedClusterId), deep_read_state(clusters())),
+    () => {
+      set(selectedCluster, get(filteredClusters).find((c) => c.id === get(selectedClusterId)) || clusters().find((c) => c.id === get(selectedClusterId)) || (get(filteredClusters).length > 0 ? get(filteredClusters)[0] : clusters().length > 0 ? clusters()[0] : null));
+    }
+  );
   legacy_pre_effect(() => get(selectedCluster), () => {
     set(clusterDistinctFiles, get(selectedCluster) ? Array.from(new Set(get(selectedCluster).chunks.map((c) => c.filePath))) : []);
   });
@@ -8164,7 +8242,7 @@ function ReviewModal($$anchor, $$props) {
   legacy_pre_effect_reset();
   var $$exports = { updateState };
   init();
-  var div = root_17();
+  var div = root_21();
   var div_1 = child(div);
   var header = child(div_1);
   var div_2 = child(header);
@@ -8174,14 +8252,32 @@ function ReviewModal($$anchor, $$props) {
   var div_3 = sibling(div_2, 2);
   var button = child(div_3);
   var button_1 = sibling(button, 2);
-  var button_2 = sibling(button_1, 2);
-  var span_1 = sibling(child(button_2), 2);
-  var text_1 = only_child(span_1);
-  reset(button_2);
+  var node = sibling(button_1, 2);
+  {
+    var consequent = ($$anchor2) => {
+      var button_2 = root6();
+      var span_1 = sibling(child(button_2), 2);
+      var text_1 = only_child(span_1, true);
+      reset(button_2);
+      template_effect(() => {
+        button_2.disabled = get(isApplyingBatch) || isScanning();
+        set_text(text_1, get(isApplyingBatch) ? "\u041F\u0440\u0438\u043C\u0435\u043D\u0435\u043D\u0438\u0435..." : `\u041F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u0441\u0435 (${get(approvedCount)})`);
+      });
+      event("click", button_2, handleApplyAllApproved);
+      append($$anchor2, button_2);
+    };
+    if_block(node, ($$render) => {
+      if (onApplyAllApproved() && get(approvedCount) > 0) $$render(consequent);
+    });
+  }
+  var button_3 = sibling(node, 2);
+  var span_2 = sibling(child(button_3), 2);
+  var text_2 = only_child(span_2);
+  reset(button_3);
   reset(div_3);
   reset(header);
-  var node = sibling(header, 2);
-  LogPanel(node, {
+  var node_1 = sibling(header, 2);
+  LogPanel(node_1, {
     get logger() {
       return logger();
     },
@@ -8189,43 +8285,84 @@ function ReviewModal($$anchor, $$props) {
       return onCancelScan();
     }
   });
-  var div_4 = sibling(node, 2);
+  var div_4 = sibling(node_1, 2);
   var aside = child(div_4);
   var div_5 = child(aside);
-  var span_2 = sibling(child(div_5), 2);
-  var text_2 = only_child(span_2, true);
+  var span_3 = sibling(child(div_5), 2);
+  var text_3 = only_child(span_3);
   reset(div_5);
   var div_6 = sibling(div_5, 2);
-  var node_1 = child(div_6);
+  var div_7 = child(div_6);
+  var input = sibling(child(div_7), 2);
+  remove_input_defaults(input);
+  var node_2 = sibling(input, 2);
   {
     var consequent_1 = ($$anchor2) => {
-      var div_7 = root_26();
-      var node_2 = child(div_7);
+      var button_4 = root_16();
+      event("click", button_4, () => set(searchQuery, ""));
+      append($$anchor2, button_4);
+    };
+    if_block(node_2, ($$render) => {
+      if (get(searchQuery)) $$render(consequent_1);
+    });
+  }
+  reset(div_7);
+  var div_8 = sibling(div_7, 2);
+  var button_5 = child(div_8);
+  let classes;
+  var text_4 = only_child(button_5);
+  var button_6 = sibling(button_5, 2);
+  let classes_1;
+  var text_5 = only_child(button_6);
+  var button_7 = sibling(button_6, 2);
+  let classes_2;
+  var text_6 = only_child(button_7);
+  var button_8 = sibling(button_7, 2);
+  let classes_3;
+  var text_7 = only_child(button_8);
+  reset(div_8);
+  reset(div_6);
+  var div_9 = sibling(div_6, 2);
+  var node_3 = child(div_9);
+  {
+    var consequent_4 = ($$anchor2) => {
+      var div_10 = root_54();
+      var node_4 = child(div_10);
       {
-        var consequent = ($$anchor3) => {
-          var p = root6();
+        var consequent_2 = ($$anchor3) => {
+          var p = root_26();
           append($$anchor3, p);
         };
-        var alternate = ($$anchor3) => {
-          var fragment = root_16();
-          var button_3 = sibling(first_child(fragment), 2);
-          event("click", button_3, function(...$$args) {
+        var consequent_3 = ($$anchor3) => {
+          var fragment = root_35();
+          var button_9 = sibling(first_child(fragment), 2);
+          event("click", button_9, function(...$$args) {
             onScanVault()?.apply(this, $$args);
           });
           append($$anchor3, fragment);
         };
-        if_block(node_2, ($$render) => {
-          if (isScanning()) $$render(consequent);
+        var alternate = ($$anchor3) => {
+          var fragment_1 = root_44();
+          var button_10 = sibling(first_child(fragment_1), 2);
+          event("click", button_10, () => {
+            set(searchQuery, "");
+            set(activeFilterTab, "all");
+          });
+          append($$anchor3, fragment_1);
+        };
+        if_block(node_4, ($$render) => {
+          if (isScanning()) $$render(consequent_2);
+          else if (deep_read_state(clusters()), untrack(() => clusters().length === 0)) $$render(consequent_3, 1);
           else $$render(alternate, -1);
         });
       }
-      reset(div_7);
-      append($$anchor2, div_7);
+      reset(div_10);
+      append($$anchor2, div_10);
     };
     var alternate_1 = ($$anchor2) => {
-      var fragment_1 = comment();
-      var node_3 = first_child(fragment_1);
-      each(node_3, 1, clusters, (cluster) => cluster.id, ($$anchor3, cluster) => {
+      var fragment_2 = comment();
+      var node_5 = first_child(fragment_2);
+      each(node_5, 1, () => get(filteredClusters), (cluster) => cluster.id, ($$anchor3, cluster) => {
         {
           let $0 = derived_safe_equal(() => (get(selectedCluster), get(cluster), untrack(() => get(selectedCluster)?.id === get(cluster).id)));
           ClusterCard($$anchor3, {
@@ -8242,159 +8379,179 @@ function ReviewModal($$anchor, $$props) {
           });
         }
       });
-      append($$anchor2, fragment_1);
+      append($$anchor2, fragment_2);
     };
-    if_block(node_1, ($$render) => {
-      if (deep_read_state(clusters()), untrack(() => clusters().length === 0)) $$render(consequent_1);
+    if_block(node_3, ($$render) => {
+      if (get(filteredClusters), untrack(() => get(filteredClusters).length === 0)) $$render(consequent_4);
       else $$render(alternate_1, -1);
     });
   }
-  reset(div_6);
+  reset(div_9);
+  var node_6 = sibling(div_9, 2);
+  {
+    var consequent_5 = ($$anchor2) => {
+      var div_11 = root_63();
+      var button_11 = child(div_11);
+      var span_4 = sibling(child(button_11), 2);
+      var text_8 = only_child(span_4, true);
+      reset(button_11);
+      reset(div_11);
+      template_effect(() => {
+        button_11.disabled = get(isAnalyzingBatch) || isScanning();
+        set_text(text_8, get(isAnalyzingBatch) ? "\u0410\u043D\u0430\u043B\u0438\u0437\u0438\u0440\u0443\u0435\u0442\u0441\u044F..." : `\u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0438\u0437\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0435\u0449\u0435 20 (\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C ${get(pendingCount)})`);
+      });
+      event("click", button_11, handleAnalyzeBatch);
+      append($$anchor2, div_11);
+    };
+    if_block(node_6, ($$render) => {
+      if (onAnalyzeNextBatch() && get(pendingCount) > 0) $$render(consequent_5);
+    });
+  }
   reset(aside);
   var main = sibling(aside, 2);
-  var node_4 = child(main);
+  var node_7 = child(main);
   {
-    var consequent_2 = ($$anchor2) => {
-      var div_8 = root_35();
-      append($$anchor2, div_8);
+    var consequent_6 = ($$anchor2) => {
+      var div_12 = root_73();
+      append($$anchor2, div_12);
     };
     var alternate_7 = ($$anchor2) => {
-      var div_9 = root_162();
-      var div_10 = child(div_9);
-      var button_4 = child(div_10);
-      var text_3 = only_child(button_4);
-      var span_3 = sibling(button_4, 2);
-      var text_4 = only_child(span_3, true);
-      reset(div_10);
-      var div_11 = sibling(div_10, 2);
-      var node_5 = child(div_11);
+      var div_13 = root_20();
+      var div_14 = child(div_13);
+      var button_12 = child(div_14);
+      var text_9 = only_child(button_12);
+      var span_5 = sibling(button_12, 2);
+      var text_10 = only_child(span_5, true);
+      reset(div_14);
+      var div_15 = sibling(div_14, 2);
+      var node_8 = child(div_15);
       {
-        var consequent_5 = ($$anchor3) => {
-          var fragment_3 = comment();
-          var node_6 = first_child(fragment_3);
+        var consequent_9 = ($$anchor3) => {
+          var fragment_4 = comment();
+          var node_9 = first_child(fragment_4);
           {
-            var consequent_3 = ($$anchor4) => {
-              var div_12 = root_44();
-              append($$anchor4, div_12);
+            var consequent_7 = ($$anchor4) => {
+              var div_16 = root_82();
+              append($$anchor4, div_16);
             };
             var alternate_2 = ($$anchor4) => {
-              var div_13 = root_63();
-              var div_14 = sibling(child(div_13), 2);
-              var text_5 = sibling(child(div_14));
-              reset(div_14);
-              var node_7 = sibling(div_14, 2);
+              var div_17 = root_10();
+              var div_18 = sibling(child(div_17), 2);
+              var text_11 = sibling(child(div_18));
+              reset(div_18);
+              var node_10 = sibling(div_18, 2);
               {
-                var consequent_4 = ($$anchor5) => {
-                  var button_5 = root_54();
-                  var text_6 = only_child(button_5, true);
+                var consequent_8 = ($$anchor5) => {
+                  var button_13 = root_9();
+                  var text_12 = only_child(button_13, true);
                   template_effect(() => {
-                    button_5.disabled = get(isAnalyzingSingle) || isScanning();
-                    set_text(text_6, get(isAnalyzingSingle) ? "\u23F3 \u0410\u043D\u0430\u043B\u0438\u0437..." : "\u{1F504} \u041F\u0435\u0440\u0435\u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0432 Gemini");
+                    button_13.disabled = get(isAnalyzingSingle) || isScanning();
+                    set_text(text_12, get(isAnalyzingSingle) ? "\u23F3 \u0410\u043D\u0430\u043B\u0438\u0437..." : "\u{1F504} \u041F\u0435\u0440\u0435\u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0432 Gemini");
                   });
-                  event("click", button_5, handleAnalyzeSingle);
-                  append($$anchor5, button_5);
+                  event("click", button_13, handleAnalyzeSingle);
+                  append($$anchor5, button_13);
                 };
-                if_block(node_7, ($$render) => {
-                  if (onAnalyzeCluster()) $$render(consequent_4);
+                if_block(node_10, ($$render) => {
+                  if (onAnalyzeCluster()) $$render(consequent_8);
                 });
               }
-              reset(div_13);
-              template_effect(() => set_text(text_5, ` ${(get(selectedPlan), untrack(() => get(selectedPlan).rejectionReason || "\u0420\u0430\u0437\u043D\u044B\u0435 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043D\u044B\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u0438\u043B\u0438 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442.")) ?? ""}`));
-              append($$anchor4, div_13);
+              reset(div_17);
+              template_effect(() => set_text(text_11, ` ${(get(selectedPlan), untrack(() => get(selectedPlan).rejectionReason || "\u0420\u0430\u0437\u043D\u044B\u0435 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043D\u044B\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u0438\u043B\u0438 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442.")) ?? ""}`));
+              append($$anchor4, div_17);
             };
-            if_block(node_6, ($$render) => {
-              if (get(selectedPlan), untrack(() => get(selectedPlan).isDuplicate)) $$render(consequent_3);
+            if_block(node_9, ($$render) => {
+              if (get(selectedPlan), untrack(() => get(selectedPlan).isDuplicate)) $$render(consequent_7);
               else $$render(alternate_2, -1);
             });
           }
-          append($$anchor3, fragment_3);
+          append($$anchor3, fragment_4);
         };
         var alternate_3 = ($$anchor3) => {
-          var div_15 = root_82();
-          var div_16 = sibling(child(div_15), 2);
-          var node_8 = sibling(child(div_16), 2);
+          var div_19 = root_122();
+          var div_20 = sibling(child(div_19), 2);
+          var node_11 = sibling(child(div_20), 2);
           {
-            var consequent_6 = ($$anchor4) => {
-              var div_17 = root_73();
-              var button_6 = child(div_17);
-              var text_7 = only_child(button_6, true);
-              reset(div_17);
+            var consequent_10 = ($$anchor4) => {
+              var div_21 = root_11();
+              var button_14 = child(div_21);
+              var text_13 = only_child(button_14, true);
+              reset(div_21);
               template_effect(() => {
-                button_6.disabled = get(isAnalyzingSingle) || isScanning();
-                set_text(text_7, get(isAnalyzingSingle) ? "\u23F3 \u0410\u043D\u0430\u043B\u0438\u0437 \u0432 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u0435..." : "\u26A1 \u0421\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043F\u043B\u0430\u043D \u0447\u0435\u0440\u0435\u0437 Gemini");
+                button_14.disabled = get(isAnalyzingSingle) || isScanning();
+                set_text(text_13, get(isAnalyzingSingle) ? "\u23F3 \u0410\u043D\u0430\u043B\u0438\u0437 \u0432 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u0435..." : "\u26A1 \u0421\u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043F\u043B\u0430\u043D \u0447\u0435\u0440\u0435\u0437 Gemini");
               });
-              event("click", button_6, handleAnalyzeSingle);
-              append($$anchor4, div_17);
+              event("click", button_14, handleAnalyzeSingle);
+              append($$anchor4, div_21);
             };
-            if_block(node_8, ($$render) => {
-              if (onAnalyzeCluster()) $$render(consequent_6);
+            if_block(node_11, ($$render) => {
+              if (onAnalyzeCluster()) $$render(consequent_10);
             });
           }
-          reset(div_16);
-          reset(div_15);
-          append($$anchor3, div_15);
+          reset(div_20);
+          reset(div_19);
+          append($$anchor3, div_19);
         };
-        if_block(node_5, ($$render) => {
-          if (get(selectedPlan)) $$render(consequent_5);
+        if_block(node_8, ($$render) => {
+          if (get(selectedPlan)) $$render(consequent_9);
           else $$render(alternate_3, -1);
         });
       }
-      var node_9 = sibling(node_5, 2);
+      var node_12 = sibling(node_8, 2);
       {
-        var consequent_8 = ($$anchor3) => {
-          var fragment_4 = root_10();
-          var div_18 = first_child(fragment_4);
-          var input = sibling(child(div_18), 2);
-          remove_input_defaults(input);
-          reset(div_18);
-          var div_19 = sibling(div_18, 2);
-          var button_7 = child(div_19);
-          var text_8 = only_child(button_7);
-          var button_8 = sibling(button_7, 2);
-          var node_10 = sibling(button_8, 2);
+        var consequent_12 = ($$anchor3) => {
+          var fragment_5 = root_142();
+          var div_22 = first_child(fragment_5);
+          var input_1 = sibling(child(div_22), 2);
+          remove_input_defaults(input_1);
+          reset(div_22);
+          var div_23 = sibling(div_22, 2);
+          var button_15 = child(div_23);
+          var text_14 = only_child(button_15);
+          var button_16 = sibling(button_15, 2);
+          var node_13 = sibling(button_16, 2);
           {
-            var consequent_7 = ($$anchor4) => {
-              var button_9 = root_9();
-              var text_9 = only_child(button_9);
-              template_effect(() => set_text(text_9, `\u{1F4D1} \u0421\u0440\u0430\u0432\u043D\u0438\u0442\u044C \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0446\u0435\u043B\u0438\u043A\u043E\u043C (${(get(clusterDistinctFiles), untrack(() => get(clusterDistinctFiles).length)) ?? ""})`));
-              event("click", button_9, () => openFullNoteDiff(get(clusterDistinctFiles)[0], get(clusterDistinctFiles)[1]));
-              append($$anchor4, button_9);
+            var consequent_11 = ($$anchor4) => {
+              var button_17 = root_132();
+              var text_15 = only_child(button_17);
+              template_effect(() => set_text(text_15, `\u{1F4D1} \u0421\u0440\u0430\u0432\u043D\u0438\u0442\u044C \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0446\u0435\u043B\u0438\u043A\u043E\u043C (${(get(clusterDistinctFiles), untrack(() => get(clusterDistinctFiles).length)) ?? ""})`));
+              event("click", button_17, () => openFullNoteDiff(get(clusterDistinctFiles)[0], get(clusterDistinctFiles)[1]));
+              append($$anchor4, button_17);
             };
-            if_block(node_10, ($$render) => {
-              if (get(clusterDistinctFiles), untrack(() => get(clusterDistinctFiles).length >= 2)) $$render(consequent_7);
+            if_block(node_13, ($$render) => {
+              if (get(clusterDistinctFiles), untrack(() => get(clusterDistinctFiles).length >= 2)) $$render(consequent_11);
             });
           }
-          reset(div_19);
+          reset(div_23);
           template_effect(() => {
-            set_class(button_7, 1, `tab-btn ${get(activeTab) === "modifications" ? "active" : ""}`, "svelte-71f0fw");
-            set_text(text_8, `\u270F\uFE0F \u0417\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 (${(get(selectedPlan), untrack(() => get(selectedPlan)?.modifications?.length || 0)) ?? ""})`);
-            set_class(button_8, 1, `tab-btn ${get(activeTab) === "notePreview" ? "active" : ""}`, "svelte-71f0fw");
+            set_class(button_15, 1, `tab-btn ${get(activeTab) === "modifications" ? "active" : ""}`, "svelte-71f0fw");
+            set_text(text_14, `\u270F\uFE0F \u0417\u0430\u043C\u0435\u043D\u044B \u0432 \u0444\u0430\u0439\u043B\u0430\u0445 (${(get(selectedPlan), untrack(() => get(selectedPlan)?.modifications?.length || 0)) ?? ""})`);
+            set_class(button_16, 1, `tab-btn ${get(activeTab) === "notePreview" ? "active" : ""}`, "svelte-71f0fw");
           });
-          bind_value(input, () => get(selectedPlan).conceptTitle, ($$value) => mutate(selectedPlan, get(selectedPlan).conceptTitle = $$value));
-          event("click", button_7, () => set(activeTab, "modifications"));
-          event("click", button_8, () => set(activeTab, "notePreview"));
-          append($$anchor3, fragment_4);
+          bind_value(input_1, () => get(selectedPlan).conceptTitle, ($$value) => mutate(selectedPlan, get(selectedPlan).conceptTitle = $$value));
+          event("click", button_15, () => set(activeTab, "modifications"));
+          event("click", button_16, () => set(activeTab, "notePreview"));
+          append($$anchor3, fragment_5);
         };
-        if_block(node_9, ($$render) => {
-          if (get(selectedPlan)) $$render(consequent_8);
+        if_block(node_12, ($$render) => {
+          if (get(selectedPlan)) $$render(consequent_12);
         });
       }
-      reset(div_11);
-      var node_11 = sibling(div_11, 2);
+      reset(div_15);
+      var node_14 = sibling(div_15, 2);
       {
-        var consequent_11 = ($$anchor3) => {
-          var div_20 = root_142();
-          var node_12 = child(div_20);
+        var consequent_15 = ($$anchor3) => {
+          var div_24 = root_18();
+          var node_15 = child(div_24);
           {
-            var consequent_10 = ($$anchor4) => {
-              var div_21 = root_122();
-              var node_13 = child(div_21);
+            var consequent_14 = ($$anchor4) => {
+              var div_25 = root_162();
+              var node_16 = child(div_25);
               {
-                var consequent_9 = ($$anchor5) => {
-                  var fragment_5 = comment();
-                  var node_14 = first_child(fragment_5);
+                var consequent_13 = ($$anchor5) => {
+                  var fragment_6 = comment();
+                  var node_17 = first_child(fragment_6);
                   each(
-                    node_14,
+                    node_17,
                     1,
                     () => (get(selectedPlan), untrack(() => get(selectedPlan).modifications)),
                     index,
@@ -8416,71 +8573,71 @@ function ReviewModal($$anchor, $$props) {
                       }
                     }
                   );
-                  append($$anchor5, fragment_5);
+                  append($$anchor5, fragment_6);
                 };
                 var alternate_4 = ($$anchor5) => {
-                  var div_22 = root_11();
-                  append($$anchor5, div_22);
+                  var div_26 = root_152();
+                  append($$anchor5, div_26);
                 };
-                if_block(node_13, ($$render) => {
-                  if (get(selectedPlan), untrack(() => get(selectedPlan)?.modifications && get(selectedPlan).modifications.length > 0)) $$render(consequent_9);
+                if_block(node_16, ($$render) => {
+                  if (get(selectedPlan), untrack(() => get(selectedPlan)?.modifications && get(selectedPlan).modifications.length > 0)) $$render(consequent_13);
                   else $$render(alternate_4, -1);
                 });
               }
-              reset(div_21);
-              append($$anchor4, div_21);
+              reset(div_25);
+              append($$anchor4, div_25);
             };
             var alternate_5 = ($$anchor4) => {
-              var div_23 = root_132();
-              var textarea = sibling(child(div_23), 2);
+              var div_27 = root_17();
+              var textarea = sibling(child(div_27), 2);
               remove_textarea_child(textarea);
-              reset(div_23);
+              reset(div_27);
               bind_value(textarea, () => get(selectedPlan).canonicalNoteMarkdown, ($$value) => mutate(selectedPlan, get(selectedPlan).canonicalNoteMarkdown = $$value));
-              append($$anchor4, div_23);
+              append($$anchor4, div_27);
             };
-            if_block(node_12, ($$render) => {
-              if (get(activeTab) === "modifications") $$render(consequent_10);
+            if_block(node_15, ($$render) => {
+              if (get(activeTab) === "modifications") $$render(consequent_14);
               else $$render(alternate_5, -1);
             });
           }
-          reset(div_20);
-          append($$anchor3, div_20);
-        };
-        var alternate_6 = ($$anchor3) => {
-          var div_24 = root_152();
+          reset(div_24);
           append($$anchor3, div_24);
         };
-        if_block(node_11, ($$render) => {
-          if (get(selectedPlan)) $$render(consequent_11);
+        var alternate_6 = ($$anchor3) => {
+          var div_28 = root_19();
+          append($$anchor3, div_28);
+        };
+        if_block(node_14, ($$render) => {
+          if (get(selectedPlan)) $$render(consequent_15);
           else $$render(alternate_6, -1);
         });
       }
-      var div_25 = sibling(node_11, 2);
-      var button_10 = child(div_25);
-      var button_11 = sibling(button_10, 4);
-      reset(div_25);
-      reset(div_9);
+      var div_29 = sibling(node_14, 2);
+      var button_18 = child(div_29);
+      var button_19 = sibling(button_18, 4);
+      reset(div_29);
+      reset(div_13);
       template_effect(() => {
-        set_text(text_3, `\u2190 \u041A \u0441\u043F\u0438\u0441\u043A\u0443 (${(deep_read_state(clusters()), untrack(() => clusters().length)) ?? ""})`);
-        set_text(text_4, (get(selectedPlan), untrack(() => get(selectedPlan)?.conceptTitle || "\u0414\u0435\u0442\u0430\u043B\u0438 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430")));
-        button_11.disabled = (get(selectedPlan), untrack(() => !get(selectedPlan) || !get(selectedPlan).isDuplicate && !get(selectedPlan).conceptTitle));
+        set_text(text_9, `\u2190 \u041A \u0441\u043F\u0438\u0441\u043A\u0443 (${(deep_read_state(clusters()), untrack(() => clusters().length)) ?? ""})`);
+        set_text(text_10, (get(selectedPlan), untrack(() => get(selectedPlan)?.conceptTitle || "\u0414\u0435\u0442\u0430\u043B\u0438 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u0430")));
+        button_19.disabled = (get(selectedPlan), untrack(() => !get(selectedPlan) || !get(selectedPlan).isDuplicate && !get(selectedPlan).conceptTitle));
       });
-      event("click", button_4, () => set(activeViewMode, "list"));
-      event("click", button_10, () => onRejectCluster()(get(selectedCluster).id));
-      event("click", button_11, handleApply);
-      append($$anchor2, div_9);
+      event("click", button_12, () => set(activeViewMode, "list"));
+      event("click", button_18, () => onRejectCluster()(get(selectedCluster).id));
+      event("click", button_19, handleApply);
+      append($$anchor2, div_13);
     };
-    if_block(node_4, ($$render) => {
-      if (!get(selectedCluster)) $$render(consequent_2);
+    if_block(node_7, ($$render) => {
+      if (!get(selectedCluster)) $$render(consequent_6);
       else $$render(alternate_7, -1);
     });
   }
   reset(main);
   reset(div_4);
   reset(div_1);
-  var node_15 = sibling(div_1, 2);
+  var node_18 = sibling(div_1, 2);
   {
-    var consequent_12 = ($$anchor2) => {
+    var consequent_16 = ($$anchor2) => {
       NoteDiffModal($$anchor2, {
         get filePathA() {
           return get(diffFilePathA);
@@ -8504,8 +8661,8 @@ function ReviewModal($$anchor, $$props) {
         }
       });
     };
-    if_block(node_15, ($$render) => {
-      if (get(diffModalOpen) && onOpenFile() && onDeleteNote()) $$render(consequent_12);
+    if_block(node_18, ($$render) => {
+      if (get(diffModalOpen) && onOpenFile() && onDeleteNote()) $$render(consequent_16);
     });
   }
   reset(div);
@@ -8514,10 +8671,18 @@ function ReviewModal($$anchor, $$props) {
           ${(deep_read_state(clusters()), untrack(() => clusters().length === 1 ? "\u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442" : "\u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432")) ?? ""}`);
     button.disabled = isScanning();
     button_1.disabled = isScanning();
-    button_2.disabled = get(historyCount) === 0 || isScanning();
-    set_text(text_1, `\u041E\u0442\u043A\u0430\u0442 (${get(historyCount) ?? ""})`);
+    button_3.disabled = get(historyCount) === 0 || isScanning();
+    set_text(text_2, `\u041E\u0442\u043A\u0430\u0442 (${get(historyCount) ?? ""})`);
     set_class(div_4, 1, `sg-body view-mode-${get(activeViewMode) ?? ""}`, "svelte-71f0fw");
-    set_text(text_2, (deep_read_state(clusters()), untrack(() => clusters().length)));
+    set_text(text_3, `${(get(filteredClusters), untrack(() => get(filteredClusters).length)) ?? ""} / ${(deep_read_state(clusters()), untrack(() => clusters().length)) ?? ""}`);
+    classes = set_class(button_5, 1, "chip-btn svelte-71f0fw", null, classes, { active: get(activeFilterTab) === "all" });
+    set_text(text_4, `\u0412\u0441\u0435 (${(deep_read_state(clusters()), untrack(() => clusters().length)) ?? ""})`);
+    classes_1 = set_class(button_6, 1, "chip-btn chip-approved svelte-71f0fw", null, classes_1, { active: get(activeFilterTab) === "approved" });
+    set_text(text_5, `\u2713 (${get(approvedCount) ?? ""})`);
+    classes_2 = set_class(button_7, 1, "chip-btn chip-rejected svelte-71f0fw", null, classes_2, { active: get(activeFilterTab) === "rejected" });
+    set_text(text_6, `\u2715 (${get(rejectedCount) ?? ""})`);
+    classes_3 = set_class(button_8, 1, "chip-btn chip-pending svelte-71f0fw", null, classes_3, { active: get(activeFilterTab) === "pending" });
+    set_text(text_7, `\u23F3 (${get(pendingCount) ?? ""})`);
   });
   event("click", button, function(...$$args) {
     onScanActiveNote()?.apply(this, $$args);
@@ -8525,7 +8690,12 @@ function ReviewModal($$anchor, $$props) {
   event("click", button_1, function(...$$args) {
     onScanVault()?.apply(this, $$args);
   });
-  event("click", button_2, handleUndo);
+  event("click", button_3, handleUndo);
+  bind_value(input, () => get(searchQuery), ($$value) => set(searchQuery, $$value));
+  event("click", button_5, () => set(activeFilterTab, "all"));
+  event("click", button_6, () => set(activeFilterTab, "approved"));
+  event("click", button_7, () => set(activeFilterTab, "rejected"));
+  event("click", button_8, () => set(activeFilterTab, "pending"));
   append($$anchor, div);
   bind_prop($$props, "updateState", updateState);
   var $$pop = pop($$exports);
@@ -8596,6 +8766,14 @@ var RefactorView = class extends import_obsidian2.ItemView {
       },
       onApplyPlan: async (cluster, plan) => {
         await this.plugin.applyRefactorPlan(cluster, plan);
+        this.updateProps();
+      },
+      onApplyAllApproved: async () => {
+        await this.plugin.applyAllApprovedPlans();
+        this.updateProps();
+      },
+      onAnalyzeNextBatch: async (size = 20) => {
+        await this.plugin.analyzeNextBatch(size);
         this.updateProps();
       },
       onRejectCluster: (clusterId) => {
@@ -10700,17 +10878,21 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
         return;
       }
       this.logger.success(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432 \u043D\u0430 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433.`);
-      new import_obsidian5.Notice(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432 \u043D\u0430 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433. \u0417\u0430\u043F\u0443\u0441\u043A LLM Gatekeeper...`);
-      if (this.settings.geminiApiKey) {
-        this.logger.info("\u0417\u0430\u043F\u0443\u0441\u043A \u0430\u043D\u0430\u043B\u0438\u0437\u0430 LLM Gatekeeper...");
-        for (let i = 0; i < this.candidateClusters.length; i++) {
+      this.candidateClusters.sort((a, b) => b.similarity - a.similarity);
+      const batchLimit = Math.max(1, this.settings.autoGatekeeperBatchLimit || 30);
+      const batchToAnalyze = this.candidateClusters.slice(0, batchLimit);
+      new import_obsidian5.Notice(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432. \u0410\u0432\u0442\u043E\u0430\u043D\u0430\u043B\u0438\u0437 \u0442\u043E\u043F-${batchToAnalyze.length} \u0447\u0435\u0440\u0435\u0437 Gatekeeper...`);
+      const hasApiKey = Boolean(this.settings.geminiApiKey || this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0);
+      if (hasApiKey) {
+        this.logger.info(`\u0417\u0430\u043F\u0443\u0441\u043A \u0430\u043D\u0430\u043B\u0438\u0437\u0430 LLM Gatekeeper \u0434\u043B\u044F \u043F\u0435\u0440\u0432\u044B\u0445 ${batchToAnalyze.length} \u0438\u0437 ${this.candidateClusters.length} \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432...`);
+        for (let i = 0; i < batchToAnalyze.length; i++) {
           if (signal.aborted) {
             this.logger.cancelSession();
             return;
           }
-          const cluster = this.candidateClusters[i];
-          const gatekeeperPct = 80 + Math.round((i + 1) / this.candidateClusters.length * 20);
-          this.scanProgress = `LLM Gatekeeper (${i + 1}/${this.candidateClusters.length}): \u0410\u043D\u0430\u043B\u0438\u0437 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430...`;
+          const cluster = batchToAnalyze[i];
+          const gatekeeperPct = 80 + Math.round((i + 1) / batchToAnalyze.length * 20);
+          this.scanProgress = `LLM Gatekeeper (${i + 1}/${batchToAnalyze.length}): \u0410\u043D\u0430\u043B\u0438\u0437 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430...`;
           this.logger.updateProgress("LLM Gatekeeper", gatekeeperPct, this.scanProgress);
           this.notifyViews();
           const clusterNumber = `#${i + 1}`;
@@ -10728,8 +10910,8 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
             console.error(`AI Analysis error for cluster ${cluster.id}:`, aiErr);
             this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 AI \u0434\u043B\u044F ${clusterLabel}: ${aiErr.message}`);
           }
-          if (i < this.candidateClusters.length - 1 && !signal.aborted) {
-            await new Promise((r) => setTimeout(r, 1500));
+          if (i < batchToAnalyze.length - 1 && !signal.aborted) {
+            await new Promise((r) => setTimeout(r, 1200));
           }
         }
       } else {
@@ -10827,17 +11009,21 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
         new import_obsidian5.Notice(`\u0414\u0443\u0431\u043B\u0438\u043A\u0430\u0442\u043E\u0432 \u0434\u043B\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0438 "${activeFile.basename}" \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E.`);
       } else {
         this.logger.success(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439.`);
-        new import_obsidian5.Notice(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439 \u0434\u043B\u044F "${activeFile.basename}".`);
-        if (this.settings.geminiApiKey) {
-          this.logger.info("\u0410\u043D\u0430\u043B\u0438\u0437 \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439 \u0447\u0435\u0440\u0435\u0437 Gemini Gatekeeper...");
-          for (let i = 0; i < this.candidateClusters.length; i++) {
+        this.candidateClusters.sort((a, b) => b.similarity - a.similarity);
+        const batchLimit = Math.max(1, this.settings.autoGatekeeperBatchLimit || 30);
+        const batchToAnalyze = this.candidateClusters.slice(0, batchLimit);
+        new import_obsidian5.Notice(`\u041D\u0430\u0439\u0434\u0435\u043D\u043E ${this.candidateClusters.length} \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439 \u0434\u043B\u044F "${activeFile.basename}". \u0410\u0432\u0442\u043E\u0430\u043D\u0430\u043B\u0438\u0437 \u0442\u043E\u043F-${batchToAnalyze.length}...`);
+        const hasApiKey = Boolean(this.settings.geminiApiKey || this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0);
+        if (hasApiKey) {
+          this.logger.info(`\u0410\u043D\u0430\u043B\u0438\u0437 ${batchToAnalyze.length} \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439 \u0447\u0435\u0440\u0435\u0437 Gemini Gatekeeper...`);
+          for (let i = 0; i < batchToAnalyze.length; i++) {
             if (signal.aborted) {
               this.logger.cancelSession();
               return;
             }
-            const cluster = this.candidateClusters[i];
-            const pct = 75 + Math.round((i + 1) / this.candidateClusters.length * 25);
-            this.logger.updateProgress("LLM Gatekeeper", pct, `\u0410\u043D\u0430\u043B\u0438\u0437 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 ${i + 1}/${this.candidateClusters.length}...`);
+            const cluster = batchToAnalyze[i];
+            const pct = 75 + Math.round((i + 1) / batchToAnalyze.length * 25);
+            this.logger.updateProgress("LLM Gatekeeper", pct, `\u0410\u043D\u0430\u043B\u0438\u0437 \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0430 ${i + 1}/${batchToAnalyze.length}...`);
             const clusterNumber = `#${i + 1}`;
             const sampleName = cluster.chunks[0]?.filePath?.split("/").pop()?.replace(/\.md$/, "") || "";
             const clusterLabel = `\u041A\u043B\u0430\u0441\u0442\u0435\u0440 ${clusterNumber} ("${sampleName}")`;
@@ -10853,8 +11039,8 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
               console.error("Active note AI error:", aiErr);
               this.logger.error(`\u041E\u0448\u0438\u0431\u043A\u0430 AI \u0434\u043B\u044F ${clusterLabel}: ${aiErr.message}`);
             }
-            if (i < this.candidateClusters.length - 1 && !signal.aborted) {
-              await new Promise((r) => setTimeout(r, 1500));
+            if (i < batchToAnalyze.length - 1 && !signal.aborted) {
+              await new Promise((r) => setTimeout(r, 1200));
             }
           }
         }
@@ -10955,6 +11141,63 @@ var SemanticGardenerPlugin = class extends import_obsidian5.Plugin {
     delete this.refactorPlans[clusterId];
     this.notifyViews();
     new import_obsidian5.Notice("\u041A\u043E\u043D\u0446\u0435\u043F\u0442 \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D \u0438 \u0443\u0434\u0430\u043B\u0435\u043D \u0438\u0437 \u043E\u0447\u0435\u0440\u0435\u0434\u0438.");
+  }
+  /**
+   * Analyzes the next batch of unanalyzed clusters on demand.
+   */
+  async analyzeNextBatch(batchSize = 20) {
+    const unanalyzed = this.candidateClusters.filter((c) => !this.refactorPlans[c.id]);
+    if (unanalyzed.length === 0) {
+      new import_obsidian5.Notice("\u0412\u0441\u0435 \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u044B \u0432 \u043E\u0447\u0435\u0440\u0435\u0434\u0438 \u0443\u0436\u0435 \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0438\u0437\u0438\u0440\u043E\u0432\u0430\u043D\u044B.");
+      return 0;
+    }
+    const batch = unanalyzed.slice(0, batchSize);
+    new import_obsidian5.Notice(`\u0417\u0430\u043F\u0443\u0441\u043A \u0430\u043D\u0430\u043B\u0438\u0437\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0445 ${batch.length} \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432 \u0447\u0435\u0440\u0435\u0437 Gemini...`);
+    this.logger.info(`\u0417\u0430\u043F\u0443\u0441\u043A \u0430\u043D\u0430\u043B\u0438\u0437\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u043F\u0430\u043A\u0435\u0442\u0430 (${batch.length} \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432)...`);
+    let analyzedCount = 0;
+    for (let i = 0; i < batch.length; i++) {
+      const cluster = batch[i];
+      try {
+        await this.analyzeCluster(cluster);
+        analyzedCount++;
+      } catch (e) {
+        console.error("Batch analysis error:", e);
+      }
+      if (i < batch.length - 1) {
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+    }
+    this.notifyViews();
+    new import_obsidian5.Notice(`\u0410\u043D\u0430\u043B\u0438\u0437 \u043F\u0430\u043A\u0435\u0442\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D (${analyzedCount}/${batch.length} \u043A\u043E\u043D\u0446\u0435\u043F\u0442\u043E\u0432).`);
+    return analyzedCount;
+  }
+  /**
+   * Batch applies all currently approved plans in 1 click.
+   */
+  async applyAllApprovedPlans() {
+    const approvedClusters = this.candidateClusters.filter((c) => {
+      const p = this.refactorPlans[c.id];
+      return p && p.isDuplicate && p.modifications && p.modifications.length > 0;
+    });
+    if (approvedClusters.length === 0) {
+      new import_obsidian5.Notice("\u041D\u0435\u0442 \u043E\u0434\u043E\u0431\u0440\u0435\u043D\u043D\u044B\u0445 \u043F\u043B\u0430\u043D\u043E\u0432 \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433\u0430 \u0434\u043B\u044F \u043F\u0430\u043A\u0435\u0442\u043D\u043E\u0433\u043E \u043F\u0440\u0438\u043C\u0435\u043D\u0435\u043D\u0438\u044F.");
+      return 0;
+    }
+    let appliedCount = 0;
+    for (const cluster of [...approvedClusters]) {
+      const plan = this.refactorPlans[cluster.id];
+      if (plan) {
+        try {
+          await this.applyRefactorPlan(cluster, plan);
+          appliedCount++;
+        } catch (err) {
+          this.logger.error(`\u0421\u0431\u043E\u0439 \u043F\u0440\u0438\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u043F\u043B\u0430\u043D\u0430 "${plan.conceptTitle}": ${err?.message || err}`);
+        }
+      }
+    }
+    this.notifyViews();
+    new import_obsidian5.Notice(`\u0423\u0441\u043F\u0435\u0448\u043D\u043E \u043F\u0440\u0438\u043C\u0435\u043D\u0435\u043D \u043F\u0430\u043A\u0435\u0442 \u0438\u0437 ${appliedCount} \u0440\u0435\u0444\u0430\u043A\u0442\u043E\u0440\u0438\u043D\u0433\u043E\u0432.`);
+    return appliedCount;
   }
   /**
    * Opens the specified note in a new workspace tab.

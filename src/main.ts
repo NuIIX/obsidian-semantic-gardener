@@ -310,20 +310,28 @@ export default class SemanticGardenerPlugin extends Plugin {
       }
 
       this.logger.success(`Найдено ${this.candidateClusters.length} кандидатов на рефакторинг.`);
-      new Notice(`Найдено ${this.candidateClusters.length} кандидатов на рефакторинг. Запуск LLM Gatekeeper...`);
 
-      // 4. Validate with Gemini Gatekeeper if API key is provided (80% - 100%)
-      if (this.settings.geminiApiKey) {
-        this.logger.info('Запуск анализа LLM Gatekeeper...');
-        for (let i = 0; i < this.candidateClusters.length; i++) {
+      // Sort clusters descending by vector similarity to prioritize strongest candidates
+      this.candidateClusters.sort((a, b) => b.similarity - a.similarity);
+
+      const batchLimit = Math.max(1, this.settings.autoGatekeeperBatchLimit || 30);
+      const batchToAnalyze = this.candidateClusters.slice(0, batchLimit);
+
+      new Notice(`Найдено ${this.candidateClusters.length} кандидатов. Автоанализ топ-${batchToAnalyze.length} через Gatekeeper...`);
+
+      // 4. Validate top batch with Gemini Gatekeeper if API key is provided (80% - 100%)
+      const hasApiKey = Boolean(this.settings.geminiApiKey || (this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0));
+      if (hasApiKey) {
+        this.logger.info(`Запуск анализа LLM Gatekeeper для первых ${batchToAnalyze.length} из ${this.candidateClusters.length} кандидатов...`);
+        for (let i = 0; i < batchToAnalyze.length; i++) {
           if (signal.aborted) {
             this.logger.cancelSession();
             return;
           }
 
-          const cluster = this.candidateClusters[i];
-          const gatekeeperPct = 80 + Math.round(((i + 1) / this.candidateClusters.length) * 20);
-          this.scanProgress = `LLM Gatekeeper (${i + 1}/${this.candidateClusters.length}): Анализ кластера...`;
+          const cluster = batchToAnalyze[i];
+          const gatekeeperPct = 80 + Math.round(((i + 1) / batchToAnalyze.length) * 20);
+          this.scanProgress = `LLM Gatekeeper (${i + 1}/${batchToAnalyze.length}): Анализ кластера...`;
           this.logger.updateProgress('LLM Gatekeeper', gatekeeperPct, this.scanProgress);
           this.notifyViews();
 
@@ -344,9 +352,9 @@ export default class SemanticGardenerPlugin extends Plugin {
             this.logger.error(`Ошибка AI для ${clusterLabel}: ${aiErr.message}`);
           }
 
-          // Rate-limiting delay (1.5s) to stay within Gemini free-tier RPM and token limits
-          if (i < this.candidateClusters.length - 1 && !signal.aborted) {
-            await new Promise(r => setTimeout(r, 1500));
+          // Rate-limiting delay (1.2s) between requests
+          if (i < batchToAnalyze.length - 1 && !signal.aborted) {
+            await new Promise(r => setTimeout(r, 1200));
           }
         }
       } else {
@@ -459,18 +467,26 @@ export default class SemanticGardenerPlugin extends Plugin {
         new Notice(`Дубликатов для заметки "${activeFile.basename}" не найдено.`);
       } else {
         this.logger.success(`Найдено ${this.candidateClusters.length} совпадений.`);
-        new Notice(`Найдено ${this.candidateClusters.length} совпадений для "${activeFile.basename}".`);
 
-        if (this.settings.geminiApiKey) {
-          this.logger.info('Анализ совпадений через Gemini Gatekeeper...');
-          for (let i = 0; i < this.candidateClusters.length; i++) {
+        // Sort clusters descending by vector similarity
+        this.candidateClusters.sort((a, b) => b.similarity - a.similarity);
+
+        const batchLimit = Math.max(1, this.settings.autoGatekeeperBatchLimit || 30);
+        const batchToAnalyze = this.candidateClusters.slice(0, batchLimit);
+
+        new Notice(`Найдено ${this.candidateClusters.length} совпадений для "${activeFile.basename}". Автоанализ топ-${batchToAnalyze.length}...`);
+
+        const hasApiKey = Boolean(this.settings.geminiApiKey || (this.settings.geminiApiKeys && this.settings.geminiApiKeys.length > 0));
+        if (hasApiKey) {
+          this.logger.info(`Анализ ${batchToAnalyze.length} совпадений через Gemini Gatekeeper...`);
+          for (let i = 0; i < batchToAnalyze.length; i++) {
             if (signal.aborted) {
               this.logger.cancelSession();
               return;
             }
-            const cluster = this.candidateClusters[i];
-            const pct = 75 + Math.round(((i + 1) / this.candidateClusters.length) * 25);
-            this.logger.updateProgress('LLM Gatekeeper', pct, `Анализ кластера ${i + 1}/${this.candidateClusters.length}...`);
+            const cluster = batchToAnalyze[i];
+            const pct = 75 + Math.round(((i + 1) / batchToAnalyze.length) * 25);
+            this.logger.updateProgress('LLM Gatekeeper', pct, `Анализ кластера ${i + 1}/${batchToAnalyze.length}...`);
 
             const clusterNumber = `#${i + 1}`;
             const sampleName = cluster.chunks[0]?.filePath?.split('/').pop()?.replace(/\.md$/, '') || '';
@@ -490,8 +506,8 @@ export default class SemanticGardenerPlugin extends Plugin {
             }
 
             // Rate-limiting delay between requests
-            if (i < this.candidateClusters.length - 1 && !signal.aborted) {
-              await new Promise(r => setTimeout(r, 1500));
+            if (i < batchToAnalyze.length - 1 && !signal.aborted) {
+              await new Promise(r => setTimeout(r, 1200));
             }
           }
         }
@@ -606,6 +622,71 @@ export default class SemanticGardenerPlugin extends Plugin {
     delete this.refactorPlans[clusterId];
     this.notifyViews();
     new Notice('Концепт отклонен и удален из очереди.');
+  }
+
+  /**
+   * Analyzes the next batch of unanalyzed clusters on demand.
+   */
+  async analyzeNextBatch(batchSize: number = 20): Promise<number> {
+    const unanalyzed = this.candidateClusters.filter(c => !this.refactorPlans[c.id]);
+    if (unanalyzed.length === 0) {
+      new Notice('Все концепты в очереди уже проанализированы.');
+      return 0;
+    }
+
+    const batch = unanalyzed.slice(0, batchSize);
+    new Notice(`Запуск анализа следующих ${batch.length} концептов через Gemini...`);
+    this.logger.info(`Запуск анализа следующего пакета (${batch.length} концептов)...`);
+
+    let analyzedCount = 0;
+    for (let i = 0; i < batch.length; i++) {
+      const cluster = batch[i];
+      try {
+        await this.analyzeCluster(cluster);
+        analyzedCount++;
+      } catch (e: any) {
+        console.error('Batch analysis error:', e);
+      }
+      if (i < batch.length - 1) {
+        await new Promise(r => setTimeout(r, 1200));
+      }
+    }
+
+    this.notifyViews();
+    new Notice(`Анализ пакета завершен (${analyzedCount}/${batch.length} концептов).`);
+    return analyzedCount;
+  }
+
+  /**
+   * Batch applies all currently approved plans in 1 click.
+   */
+  async applyAllApprovedPlans(): Promise<number> {
+    const approvedClusters = this.candidateClusters.filter(c => {
+      const p = this.refactorPlans[c.id];
+      return p && p.isDuplicate && p.modifications && p.modifications.length > 0;
+    });
+
+    if (approvedClusters.length === 0) {
+      new Notice('Нет одобренных планов рефакторинга для пакетного применения.');
+      return 0;
+    }
+
+    let appliedCount = 0;
+    for (const cluster of [...approvedClusters]) {
+      const plan = this.refactorPlans[cluster.id];
+      if (plan) {
+        try {
+          await this.applyRefactorPlan(cluster, plan);
+          appliedCount++;
+        } catch (err: any) {
+          this.logger.error(`Сбой применения плана "${plan.conceptTitle}": ${err?.message || err}`);
+        }
+      }
+    }
+
+    this.notifyViews();
+    new Notice(`Успешно применен пакет из ${appliedCount} рефакторингов.`);
+    return appliedCount;
   }
 
   /**
